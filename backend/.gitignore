@@ -1,0 +1,12 @@
+.deps/
+.venv/
+__pycache__/
+.pytest_cache/
+*.db
+.env
+
+/artifacts/*
+!/artifacts/pruebas_mysql.xml
+/data/
+/documentacion/*.py
+*.pyc

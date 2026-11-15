@@ -1,0 +1,8 @@
+.deps
+.venv
+data
+documentacion
+*.db
+artifacts
+.env
+__pycache__
