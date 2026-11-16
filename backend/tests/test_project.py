@@ -143,6 +143,86 @@ def test_HU06_persistence_after_restart(apps):
         assert restarted_client.get("/api/clientes").json()[0]["name"] == SAMPLE_CLIENT["name"]
 
 
+def test_HU06_update_client(apps):
+    client_http, _, _ = apps
+    created = client_http.post(
+        "/api/clientes",
+        json=SAMPLE_CLIENT,
+    )
+    assert created.status_code == 201
+    client_id = created.json()["id"]
+    response = client_http.put(
+        f"/api/clientes/{client_id}",
+        json={
+            "name": "Ana Actualizada",
+            "email": "ANA.NUEVA@example.test",
+            "phone": "4779876543",
+            "address": "Calle Nueva 456, León",
+        },
+    )
+    assert response.status_code == 200
+    updated = response.json()
+    assert updated["id"] == client_id
+    assert updated["name"] == "Ana Actualizada"
+    assert updated["email"] == "ana.nueva@example.test"
+    assert updated["phone"] == "4779876543"
+    consulted = client_http.get(f"/api/clientes/{client_id}")
+    assert consulted.status_code == 200
+    assert consulted.json()["name"] == "Ana Actualizada"
+
+
+def test_HU06_update_nonexistent_client(apps):
+    client_http, _, _ = apps
+    response = client_http.put(
+        "/api/clientes/999999",
+        json=SAMPLE_CLIENT,
+    )
+    assert response.status_code == 404
+
+
+def test_HU06_update_duplicate_email(apps):
+    client_http, _, _ = apps
+    first = client_http.post(
+        "/api/clientes",
+        json=SAMPLE_CLIENT,
+    )
+    assert first.status_code == 201
+    second = client_http.post(
+        "/api/clientes",
+        json={
+            **SAMPLE_CLIENT,
+            "email": "segundo@example.test",
+        },
+    )
+    assert second.status_code == 201
+    second_id = second.json()["id"]
+    response = client_http.put(
+        f"/api/clientes/{second_id}",
+        json={
+            **SAMPLE_CLIENT,
+            "email": "ANA@example.test",
+        },
+    )
+    assert response.status_code == 409
+
+
+def test_HU06_update_invalid_data(apps):
+    client_http, _, _ = apps
+    created = client_http.post(
+        "/api/clientes",
+        json=SAMPLE_CLIENT,
+    )
+    assert created.status_code == 201
+    client_id = created.json()["id"]
+    response = client_http.put(
+        f"/api/clientes/{client_id}",
+        json={
+            **SAMPLE_CLIENT,
+            "phone": "123",
+        },
+    )
+    assert response.status_code == 422
+
 # ─── Pruebas de HU 02: Gestión de Reservas, Disponibilidad y Anticipo ────────
 
 

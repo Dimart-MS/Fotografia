@@ -37,6 +37,27 @@ class ClienteRepository:
             inserted_id = result.inserted_primary_key[0]
             return {"id": inserted_id, **client_data}
 
+    def update_client(
+        self,
+        client_id: int,
+        client_data: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        """Actualiza los datos de un cliente existente."""
+        with self.engine.begin() as conn:
+            stmt = (
+                update(self.clients)
+                .where(self.clients.c.id == client_id)
+                .values(**client_data)
+            )
+            result = conn.execute(stmt)
+            if result.rowcount == 0:
+                return None
+            updated = conn.execute(
+                select(self.clients).where(
+                    self.clients.c.id == client_id
+                )
+            ).mappings().first()
+            return dict(updated) if updated else None
 
 class ReservaRepository:
     """Repositorio para gestionar la persistencia de reservas, disponibilidad y anticipos."""
@@ -165,5 +186,4 @@ class ReservaRepository:
             result = conn.execute(update_stmt)
             if result.rowcount != 1:
                 return "NOT_PENDING"
-
             return "CANCELLED"

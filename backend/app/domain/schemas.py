@@ -68,3 +68,8 @@ class PaymentInput(BaseModel):
         decimal_places=2,
         description="Monto del anticipo verificado en MXN (entre 50% y 100% del paquete)",
     )
+
+class ClientUpdateInput(ClientInput):
+    """Datos requeridos para actualizar un cliente existente."""
+
+    pass

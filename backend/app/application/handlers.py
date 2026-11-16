@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.core.config import today
 from app.domain.models import PACKAGES
-from app.domain.schemas import BookingInput, ClientInput, PaymentInput
+from app.domain.schemas import BookingInput, ClientInput, ClientUpdateInput, PaymentInput
 from app.infrastructure.repositories import ClienteRepository, ReservaRepository
 
 
@@ -55,6 +55,36 @@ class AddClienteCommand:
                 detail="Ya existe un cliente con ese correo",
             )
 
+class UpdateClienteCommand:
+    """Caso de uso para actualizar los datos de un cliente."""
+    def __init__(self, repository: ClienteRepository):
+        self.repository = repository
+    def execute(
+        self,
+        client_id: int,
+        body: ClientUpdateInput,
+    ) -> dict[str, Any]:
+        if client_id <= 0:
+            raise HTTPException(
+                status_code=422,
+                detail="El identificador del cliente debe ser positivo",
+            )
+        try:
+            updated = self.repository.update_client(
+                client_id,
+                body.model_dump(),
+            )
+        except IntegrityError:
+            raise HTTPException(
+                status_code=409,
+                detail="Ya existe otro cliente con ese correo",
+            )
+        if updated is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Cliente no encontrado",
+            )
+        return updated
 
 # ─── Queries y Commands: Módulo de Reservas y Agenda (HU 02) ─────────────────
 

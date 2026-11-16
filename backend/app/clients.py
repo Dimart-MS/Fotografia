@@ -16,10 +16,11 @@ from app.application.handlers import (
     AddClienteCommand,
     GetClienteByIdQuery,
     GetClientesQuery,
+    UpdateClienteCommand,
 )
 from app.core.config import auth_dependency
 from app.domain.models import build_clients_table
-from app.domain.schemas import ClientInput
+from app.domain.schemas import ClientInput, ClientUpdateInput
 from app.infrastructure.database import check_database_health, database
 from app.infrastructure.repositories import ClienteRepository
 
@@ -75,4 +76,15 @@ def create_app(db_url: str | None = None, api_key: str | None = None) -> FastAPI
         command = AddClienteCommand(repository)
         return command.execute(body)
 
+    @app.put(
+        "/api/clientes/{client_id}",
+        dependencies=[Depends(auth)],
+        tags=["Clientes"],
+    )
+    def update_client(
+        client_id: int,
+        body: ClientUpdateInput,
+    ):
+        command = UpdateClienteCommand(repository)
+        return command.execute(client_id, body)
     return app
