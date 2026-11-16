@@ -17,6 +17,7 @@ from sqlalchemy.engine import make_url
 from app.bookings import create_app as bookings_app
 from app.clients import create_app as clients_app
 from app.common import today
+from tests.database_safety import validate_test_database_url
 
 KEY = "clave-solo-para-pruebas-2026"
 HEADERS = {"Authorization": f"Bearer {KEY}"}
@@ -43,12 +44,8 @@ def apps(tmp_path):
         f"sqlite:///{tmp_path}/bookings.db",
     )
 
-    for url in (clients_url, bookings_url):
-        if not url.startswith("sqlite") and not (make_url(url).database or "").endswith("_test"):
-            raise ValueError(
-                "Las bases de prueba externas deben terminar en _test; "
-                "no se permite usar bases reales."
-            )
+    validate_test_database_url(clients_url)
+    validate_test_database_url(bookings_url)
 
     client_service = clients_app(clients_url, KEY)
     with TestClient(client_service, headers=HEADERS) as client_http:
@@ -64,13 +61,13 @@ def apps(tmp_path):
 
         booking_service = bookings_app(bookings_url, KEY, lookup)
         with TestClient(booking_service, headers=HEADERS) as booking_http:
-            if clients_url.startswith("postgresql"):
+            if make_url(clients_url).get_backend_name() == "postgresql":
                 with client_service.state.engine.begin() as conn:
                     conn.execute(text("TRUNCATE clients RESTART IDENTITY"))
                 with booking_service.state.engine.begin() as conn:
                     conn.execute(text("TRUNCATE bookings RESTART IDENTITY"))
 
-            if clients_url.startswith("mysql"):
+            if make_url(clients_url).get_backend_name() == "mysql":
                 with client_service.state.engine.begin() as conn:
                     conn.execute(text("DELETE FROM clients"))
                 with booking_service.state.engine.begin() as conn:
@@ -430,8 +427,7 @@ def test_dependency_unavailable_is_503(tmp_path, monkeypatch):
     monkeypatch.setattr(httpx, "get", fail_connection)
 
     failure_url = os.getenv("TEST_BOOKINGS_DATABASE_URL", f"sqlite:///{tmp_path}/failure.db")
-    if not failure_url.startswith("sqlite") and not (make_url(failure_url).database or "").endswith("_test"):
-        raise ValueError("La base de fallos debe terminar en _test")
+    validate_test_database_url(failure_url)
     failure_app = bookings_app(failure_url, KEY)
     with TestClient(
         failure_app,
@@ -453,3 +449,33 @@ def test_health(apps):
     client_http, booking_http, _ = apps
     assert client_http.get("/health").json()["status"] == "ok"
     assert booking_http.get("/health").json()["status"] == "ok"
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "mysql+pymysql://root:example@localhost/fotografia_clientes",
+        "mysql+pymysql://root:example@localhost/fotografia_reservas",
+        "postgresql://user:example@localhost/fotografia_reservas",
+        "mysql+pymysql://root:example@localhost/mysql",
+        "mssql+pyodbc://localhost/fotografia_reservas_test",
+    ],
+)
+def test_reject_unsafe_database_urls(url):
+    """Nunca se permite ejecutar pruebas sobre bases no autorizadas."""
+    with pytest.raises(ValueError):
+        validate_test_database_url(url)
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "sqlite:///temporal.db",
+        "mysql+pymysql://root:example@localhost/fotografia_clientes_test",
+        "mysql+pymysql://root:example@localhost/fotografia_reservas_test",
+        "postgresql://user:example@localhost/fotografia_reservas_test",
+    ],
+)
+def test_accept_safe_database_urls(url):
+    """Acepta bases de prueba sin abrir conexiones."""
+    validate_test_database_url(url)
