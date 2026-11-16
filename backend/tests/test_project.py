@@ -374,6 +374,29 @@ def test_HU02_cannot_inject_price(apps):
     assert booking_http.post("/api/reservas", json=tampered_payload).status_code == 422
 
 
+def test_HU02_get_booking_by_id(apps):
+    client_http, booking_http, _ = apps
+    created = create_sample_reservation(client_http, booking_http,)
+    assert created.status_code == 201
+    booking_id = created.json()["id"]
+    response = booking_http.get(f"/api/reservas/{booking_id}")
+    assert response.status_code == 200
+    assert response.json()["id"] == booking_id
+    assert response.json()["client_id"] == created.json()["client_id"]
+
+
+def test_HU02_get_nonexistent_booking(apps):
+    _, booking_http, _ = apps
+    response = booking_http.get("/api/reservas/999999")
+    assert response.status_code == 404
+
+
+def test_HU02_get_invalid_booking_id(apps):
+    _, booking_http, _ = apps
+    response = booking_http.get("/api/reservas/0")
+    assert response.status_code == 422
+
+
 # ─── Pruebas Transversales de Seguridad, Salud y Resiliencia ─────────────────
 
 

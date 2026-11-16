@@ -122,6 +122,25 @@ class GetReservasQuery:
         return self.repository.list_all()
 
 
+class GetReservaByIdQuery:
+    """Caso de uso para consultar una reserva específica."""
+    def __init__(self, repository: ReservaRepository):
+        self.repository = repository
+    def execute(self, booking_id: int) -> dict[str, Any]:
+        if booking_id <= 0:
+            raise HTTPException(
+                status_code=422,
+                detail="El identificador debe ser positivo",
+            )
+        booking = self.repository.get_by_id(booking_id)
+        if booking is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Reserva no encontrada",
+            )
+        return booking
+
+
 class AddReservaCommand:
     """Caso de uso para registrar una nueva solicitud de reserva (HU 02)."""
 

@@ -21,6 +21,7 @@ from app.application.handlers import (
     GetDisponibilidadQuery,
     GetPaquetesQuery,
     GetReservasQuery,
+    GetReservaByIdQuery,
 )
 from app.core.config import auth_dependency
 from app.domain.models import PACKAGES, build_bookings_table
@@ -82,6 +83,11 @@ def create_app(
     def list_bookings():
         query = GetReservasQuery(repository)
         return query.execute()
+
+    @app.get("/api/reservas/{booking_id}", dependencies=[Depends(auth)], tags=["Reservas"])
+    def get_booking(booking_id: int):
+        query = GetReservaByIdQuery(repository)
+        return query.execute(booking_id)
 
     @app.post(
         "/api/reservas",

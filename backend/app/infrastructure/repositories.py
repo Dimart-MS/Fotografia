@@ -83,6 +83,15 @@ class ReservaRepository:
             rows = conn.execute(stmt).mappings().all()
             return [dict(row) for row in rows]
 
+    def get_by_id(self, booking_id: int) -> dict[str, Any] | None:
+        """Obtiene una reserva por su identificador."""
+        stmt = select(self.bookings).where(
+            self.bookings.c.id == booking_id
+        )
+        with self.engine.connect() as conn:
+            row = conn.execute(stmt).mappings().first()
+            return dict(row) if row else None
+
     def create_pending_booking(self, values: dict[str, Any]) -> dict[str, Any] | None:
         """
         Registra una nueva solicitud en estado 'Pendiente de anticipo' siempre que la fecha
