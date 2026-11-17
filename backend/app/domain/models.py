@@ -2,7 +2,7 @@
 Modelos de dominio y definición de tablas SQLAlchemy.
 Soporta MySQL (Laragon), PostgreSQL y SQLite.
 """
-from sqlalchemy import Column, Date, Index, Integer, MetaData, String, Table
+from sqlalchemy import Column, Computed, Date, Index, Integer, MetaData, String, Table
 
 # Catálogo oficial de paquetes fotográficos (importes expresados en centavos MXN)
 PACKAGES: dict[str, dict[str, str | int]] = {
@@ -52,7 +52,23 @@ def build_bookings_table(metadata: MetaData, dialect_name: str = "sqlite") -> Ta
         Column("total_cents", Integer, nullable=False),
         Column("paid_cents", Integer, nullable=False, default=0),
         Column("status", String(30), nullable=False, default="Pendiente de anticipo"),
+        *(
+            [Column(
+                "confirmed_event_date",
+                Date,
+                Computed("CASE WHEN status = 'Confirmada' THEN event_date ELSE NULL END", persisted=True,),
+                nullable=True,
+            )]
+            if dialect_name == "mysql"
+            else []
+        ),
     )
+    if dialect_name == "mysql":
+        Index(
+            "uq_confirmed_event_date",
+            bookings_table.c.confirmed_event_date,
+            unique=True,
+        )
 
     if dialect_name != "mysql":
         confirmed_condition = bookings_table.c.status == "Confirmada"

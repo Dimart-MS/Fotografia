@@ -6,7 +6,7 @@ from datetime import date
 from typing import Any
 
 from sqlalchemy import Engine, Table, insert, select, update
-
+from sqlalchemy.exc import IntegrityError
 
 class ClienteRepository:
     """Repositorio para gestionar la persistencia de clientes del estudio fotográfico."""
@@ -117,54 +117,84 @@ class ReservaRepository:
         current_date: date,
     ) -> tuple[str, dict[str, Any] | None]:
         """
-        Ejecuta la validación transaccional y confirmación de anticipo de una reserva.
-        Retorna una tupla (estado_operacion, fila_actual).
+        Valida y confirma una reserva dentro de una transacción.
+        Maneja conflictos de fechas mediante el índice único de MySQL.
         """
         is_mysql = self.engine.dialect.name == "mysql"
-        with self.engine.begin() as conn:
-            base_select = select(self.bookings).where(self.bookings.c.id == booking_id)
-            if is_mysql:
-                base_select = base_select.with_for_update()
+        booking_dict = None
 
-            row = conn.execute(base_select).mappings().first()
-            if not row:
-                return ("NOT_FOUND", None)
+        try:
+            with self.engine.begin() as conn:
+                base_select = select(self.bookings).where(
+                    self.bookings.c.id == booking_id
+                )
 
-            booking_dict = dict(row)
-            if booking_dict["event_date"] < current_date:
-                return ("PAST_DATE", booking_dict)
+                if is_mysql:
+                    base_select = base_select.with_for_update()
 
-            min_deposit = booking_dict["total_cents"] // 2
-            max_deposit = booking_dict["total_cents"]
-            if paid_cents < min_deposit or paid_cents > max_deposit:
-                return ("INVALID_AMOUNT", booking_dict)
+                row = conn.execute(base_select).mappings().first()
 
-            if is_mysql:
-                conflict_stmt = (
-                    select(self.bookings.c.id)
-                    .where(
-                        self.active_condition,
-                        self.bookings.c.event_date == booking_dict["event_date"],
-                        self.bookings.c.id != booking_id,
+                if not row:
+                    return ("NOT_FOUND", None)
+
+                booking_dict = dict(row)
+
+                if booking_dict["event_date"] < current_date:
+                    return ("PAST_DATE", booking_dict)
+
+                min_deposit = booking_dict["total_cents"] // 2
+                max_deposit = booking_dict["total_cents"]
+
+                if paid_cents < min_deposit or paid_cents > max_deposit:
+                    return ("INVALID_AMOUNT", booking_dict)
+
+                if is_mysql:
+                    conflict_stmt = (
+                        select(self.bookings.c.id)
+                        .where(
+                            self.active_condition,
+                            self.bookings.c.event_date == booking_dict["event_date"],
+                            self.bookings.c.id != booking_id,
+                        )
+                        .with_for_update()
                     )
-                    .with_for_update()
-                )
-                if conn.execute(conflict_stmt).first():
-                    return ("DATE_CONFLICT", booking_dict)
 
-            update_stmt = (
-                update(self.bookings)
-                .where(
-                    self.bookings.c.id == booking_id,
-                    self.bookings.c.status == "Pendiente de anticipo",
+                    if conn.execute(conflict_stmt).first():
+                        return ("DATE_CONFLICT", booking_dict)
+
+                update_stmt = (
+                    update(self.bookings)
+                    .where(
+                        self.bookings.c.id == booking_id,
+                        self.bookings.c.status == "Pendiente de anticipo",
+                    )
+                    .values(
+                        status="Confirmada",
+                        paid_cents=paid_cents,
+                    )
                 )
-                .values(status="Confirmada", paid_cents=paid_cents)
+
+                result = conn.execute(update_stmt)
+
+                if result.rowcount != 1:
+                    return ("NOT_PENDING", booking_dict)
+
+                return ("CONFIRMED", booking_dict)
+
+        except IntegrityError as error:
+            mysql_error_code = (
+                error.orig.args[0]
+                if is_mysql and getattr(error.orig, "args", None)
+                else None
             )
-            result = conn.execute(update_stmt)
-            if result.rowcount != 1:
-                return ("NOT_PENDING", booking_dict)
 
-            return ("CONFIRMED", booking_dict)
+            if (
+                mysql_error_code == 1062
+                and "uq_confirmed_event_date" in str(error.orig)
+            ):
+                return ("DATE_CONFLICT", booking_dict)
+
+            raise
 
     def cancel_pending_booking(self, booking_id: int) -> str:
         """
