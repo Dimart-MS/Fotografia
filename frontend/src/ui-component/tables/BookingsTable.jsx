@@ -1,3 +1,4 @@
+
 import { Button } from '@mui/material';
 import StatusBadge from '../StatusBadge';
 import EmptyState from '../EmptyState';
@@ -46,36 +47,52 @@ export default function BookingsTable({
             </th>
           </tr>
         </thead>
+
         <tbody>
           {rows.map((booking) => {
-            const packageObj = packages.find((pkg) => pkg.id === booking.package);
-            const isPending = booking.status === 'Pendiente de anticipo';
+            const packageObj = packages.find(
+              (pkg) => pkg.id === booking.package
+            );
+
+            const isPending =
+              booking.status === 'Pendiente de anticipo';
 
             return (
               <tr key={booking.id}>
                 <td>
                   <strong>{booking.client_name}</strong>
                   <small>
-                    {booking.event_type} · {packageObj?.name}
+                    {booking.event_type}
+                    {packageObj?.name ? ` · ${packageObj.name}` : ''}
                   </small>
                 </td>
+
                 <td>{formatPrettyDate(booking.event_date)}</td>
+
                 <td>
                   <StatusBadge status={booking.status} />
                 </td>
+
                 <td>
                   <strong>{formatMoney(booking.total_cents)}</strong>
-                  <small>{formatMoney(booking.paid_cents)} registrados</small>
+                  <small>
+                    {formatMoney(booking.paid_cents)} registrados
+                  </small>
                 </td>
+
                 <td>
                   {isPending && (
-                    <div className="row-actions">
+                    <div
+                      className="row-actions"
+                      aria-label={`Acciones para la reserva de ${booking.client_name}`}
+                    >
                       <Button
                         size="small"
                         onClick={() => onOpenConfirmPayment(booking)}
                       >
                         Confirmar
                       </Button>
+
                       <button
                         type="button"
                         className="text-button muted"

@@ -1,14 +1,30 @@
+
 // ==============================|| INSIGNIA DE ESTADO DE RESERVA ||============================== //
 
 export default function StatusBadge({ status }) {
-  const modifierClass =
-    status === 'Confirmada'
-      ? 'confirmed'
-      : status === 'Cancelada'
-        ? 'cancelled'
-        : 'pending';
+  const statusConfig = {
+    Confirmada: {
+      modifierClass: 'confirmed',
+      displayLabel: 'Confirmada'
+    },
+    Cancelada: {
+      modifierClass: 'cancelled',
+      displayLabel: 'Cancelada'
+    },
+    'Pendiente de anticipo': {
+      modifierClass: 'pending',
+      displayLabel: 'Por confirmar'
+    }
+  };
 
-  const displayLabel = status === 'Pendiente de anticipo' ? 'Por confirmar' : status;
+  const config = statusConfig[status] || {
+    modifierClass: 'unknown',
+    displayLabel: status || 'Sin estado'
+  };
 
-  return <span className={`badge ${modifierClass}`}>{displayLabel}</span>;
+  return (
+    <span className={`badge ${config.modifierClass}`}>
+      {config.displayLabel}
+    </span>
+  );
 }

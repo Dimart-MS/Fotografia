@@ -1,3 +1,4 @@
+
 import { Button } from '@mui/material';
 import Icon from './Icon';
 
@@ -12,11 +13,18 @@ export default function EmptyState({
   onAction
 }) {
   return (
-    <div className="empty">
+    <div className="empty" role="status">
       <Icon name={icon} size={iconSize} />
+
       {title && <h3>{title}</h3>}
+
       {description && <p>{description}</p>}
-      {actionLabel && onAction && <Button onClick={onAction}>{actionLabel}</Button>}
+
+      {actionLabel && onAction && (
+        <Button onClick={onAction}>
+          {actionLabel}
+        </Button>
+      )}
     </div>
   );
 }

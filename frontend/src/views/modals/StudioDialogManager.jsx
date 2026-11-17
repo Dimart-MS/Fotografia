@@ -217,9 +217,10 @@ export default function StudioDialogManager() {
                       htmlInput: {
                         min: selectedBooking.total_cents / 200,
                         max: selectedBooking.total_cents / 100,
-                        step: '.01'
+                        step: '0.01'
                       }
                     }}
+
                   />
                   <p>
                     Mínimo requerido: {formatMoney(selectedBooking.total_cents / 2)} ·

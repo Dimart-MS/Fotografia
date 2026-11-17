@@ -1,4 +1,4 @@
-// third party
+
 import { createSlice } from '@reduxjs/toolkit';
 
 // project imports
@@ -65,13 +65,19 @@ export function getClients(accessKey) {
   return async () => {
     try {
       dispatch(slice.actions.setLoading(true));
+
       const data = await fetchClientes(accessKey);
       dispatch(slice.actions.getClientsSuccess(data));
+
       return data;
     } catch (error) {
-      const errorMessage = error.message || 'Error al obtener clientes';
+      const errorMessage =
+        error.message || 'Error al obtener clientes';
+
       dispatch(slice.actions.hasError(errorMessage));
       throw error;
+    } finally {
+      dispatch(slice.actions.setLoading(false));
     }
   };
 }
@@ -80,13 +86,19 @@ export function addClient(clientData, accessKey) {
   return async () => {
     try {
       dispatch(slice.actions.setLoading(true));
+
       const created = await createCliente(clientData, accessKey);
       dispatch(slice.actions.addClientSuccess(created));
+
       return created;
     } catch (error) {
-      const errorMessage = error.message || 'Error al registrar el cliente';
+      const errorMessage =
+        error.message || 'Error al registrar el cliente';
+
       dispatch(slice.actions.hasError(errorMessage));
       throw error;
+    } finally {
+      dispatch(slice.actions.setLoading(false));
     }
   };
 }

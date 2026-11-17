@@ -1,3 +1,4 @@
+
 import { Button, TextField } from '@mui/material';
 import EmptyState from '../../ui-component/EmptyState';
 import { getClientInitials, getLocalToday } from '../../utils/formatters';
@@ -14,9 +15,10 @@ export default function ClientesView() {
     openBookingModal
   } = useStudio();
 
-  const normalizedQuery = search.toLowerCase();
+  const normalizedQuery = search.trim().toLowerCase();
+
   const filteredClients = clients.filter((client) =>
-    `${client.name} ${client.email} ${client.phone}`
+    `${client.name || ''} ${client.email || ''} ${client.phone || ''}`
       .toLowerCase()
       .includes(normalizedQuery)
   );
@@ -27,42 +29,56 @@ export default function ClientesView() {
         <h2>
           Directorio <span className="count">{clients.length}</span>
         </h2>
+
         <TextField
           label="Buscar por nombre, correo o teléfono"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={{ maxWidth: 320 }}
+          size="small"
         />
       </div>
 
       {clients.length > 0 ? (
-        <div className="client-grid">
-          {filteredClients.map((client) => (
-            <article className="client-card" key={client.id}>
-              <div className="client-avatar">
-                {getClientInitials(client.name)}
-              </div>
-              <h3>{client.name}</h3>
-              <p>
-                {client.email}
-                <br />
-                {client.phone}
-              </p>
-              <p className="address">{client.address}</p>
-              <Button
-                variant="outlined"
-                fullWidth
-                onClick={() => openBookingModal(getLocalToday(), client.id)}
-              >
-                Reservar evento <span className="button-arrow">↗</span>
-              </Button>
-            </article>
-          ))}
+        filteredClients.length > 0 ? (
+          <div className="client-grid">
+            {filteredClients.map((client) => (
+              <article className="client-card" key={client.id}>
+                <div className="client-avatar">
+                  {getClientInitials(client.name || 'Cliente')}
+                </div>
 
-          {filteredClients.length === 0 && (
-            <p className="empty">No se encontraron clientes con ese criterio de búsqueda.</p>
-          )}
-        </div>
+                <h3>{client.name || 'Sin nombre'}</h3>
+
+                <p>
+                  {client.email || 'Sin correo registrado'}
+                  <br />
+                  {client.phone || 'Sin teléfono registrado'}
+                </p>
+
+                {client.address && (
+                  <p className="address">{client.address}</p>
+                )}
+
+                <Button
+                  variant="outlined"
+                  fullWidth
+                  onClick={() =>
+                    openBookingModal(getLocalToday(), client.id)
+                  }
+                >
+                  Reservar evento <span className="button-arrow">↗</span>
+                </Button>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            icon="search"
+            title="No encontramos coincidencias"
+            description="Intenta buscar con otro nombre, correo o teléfono."
+          />
+        )
       ) : (
         <EmptyState
           icon="people"

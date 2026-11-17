@@ -28,8 +28,9 @@ export default function DashboardView() {
     .sort((a, b) => a.event_date.localeCompare(b.event_date))[0];
 
   const upcomingRows = bookings
-    .filter((b) => b.status !== 'Cancelada' && b.event_date >= todayStr)
-    .slice(0, 5);
+  .filter((b) => b.status !== 'Cancelada' && b.event_date >= todayStr)
+  .sort((a, b) => a.event_date.localeCompare(b.event_date))
+  .slice(0, 5);
 
   const summaryStats = [
     { count: clients.length, label: 'Clientes registrados', icon: 'people' },

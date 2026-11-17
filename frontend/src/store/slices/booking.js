@@ -74,21 +74,29 @@ export const {
 
 // ==============================|| SLICE - BOOKING ACTIONS ||============================== //
 
+
 export function getBookingsAndPackages(accessKey) {
   return async () => {
     try {
       dispatch(slice.actions.setLoading(true));
+
       const [bookingsData, packagesData] = await Promise.all([
         fetchReservas(accessKey),
         fetchPaquetes(accessKey)
       ]);
+
       dispatch(slice.actions.getBookingsSuccess(bookingsData));
       dispatch(slice.actions.getPackagesSuccess(packagesData));
+
       return { bookings: bookingsData, packages: packagesData };
     } catch (error) {
-      const errorMessage = error.message || 'Error al obtener la agenda del estudio';
+      const errorMessage =
+        error.message || 'Error al obtener la agenda del estudio';
+
       dispatch(slice.actions.hasError(errorMessage));
       throw error;
+    } finally {
+      dispatch(slice.actions.setLoading(false));
     }
   };
 }
@@ -97,13 +105,19 @@ export function addBooking(bookingData, accessKey) {
   return async () => {
     try {
       dispatch(slice.actions.setLoading(true));
+
       const created = await createReserva(bookingData, accessKey);
       dispatch(slice.actions.addBookingSuccess(created));
+
       return created;
     } catch (error) {
-      const errorMessage = error.message || 'Error al crear la solicitud de reserva';
+      const errorMessage =
+        error.message || 'Error al crear la solicitud de reserva';
+
       dispatch(slice.actions.hasError(errorMessage));
       throw error;
+    } finally {
+      dispatch(slice.actions.setLoading(false));
     }
   };
 }
@@ -112,12 +126,20 @@ export function confirmBookingDeposit(bookingId, amount, accessKey) {
   return async () => {
     try {
       dispatch(slice.actions.setLoading(true));
-      const result = await confirmarAnticipoReserva(bookingId, amount, accessKey);
-      return result;
+
+      return await confirmarAnticipoReserva(
+        bookingId,
+        amount,
+        accessKey
+      );
     } catch (error) {
-      const errorMessage = error.message || 'Error al confirmar el anticipo';
+      const errorMessage =
+        error.message || 'Error al confirmar el anticipo';
+
       dispatch(slice.actions.hasError(errorMessage));
       throw error;
+    } finally {
+      dispatch(slice.actions.setLoading(false));
     }
   };
 }
@@ -126,12 +148,16 @@ export function cancelPendingBooking(bookingId, accessKey) {
   return async () => {
     try {
       dispatch(slice.actions.setLoading(true));
-      const result = await cancelarSolicitudReserva(bookingId, accessKey);
-      return result;
+
+      return await cancelarSolicitudReserva(bookingId, accessKey);
     } catch (error) {
-      const errorMessage = error.message || 'Error al cancelar la reserva';
+      const errorMessage =
+        error.message || 'Error al cancelar la reserva';
+
       dispatch(slice.actions.hasError(errorMessage));
       throw error;
+    } finally {
+      dispatch(slice.actions.setLoading(false));
     }
   };
 }

@@ -6,7 +6,7 @@ import useStudio from '../../hooks/useStudio';
 
 // ==============================|| VISTA DE ACCESO AL ESTUDIO ||============================== //
 
-export default function LoginView() {
+export default function LoginView({ onBack }) {
   const { loginKey, setLoginKey, loading, error, handleLogin } = useStudio();
 
   return (
@@ -34,6 +34,16 @@ export default function LoginView() {
 
       <div className="login-panel">
         <Logo iconSize={28} />
+
+        {onBack && (
+          <Button
+            variant="text"
+            onClick={onBack}
+            sx={{ alignSelf: 'flex-start', mt: 2 }}
+          >
+            Volver al inicio
+          </Button>
+        )}
 
         <div className="login-content">
           <span className="eyebrow">ACCESO ADMINISTRATIVO</span>

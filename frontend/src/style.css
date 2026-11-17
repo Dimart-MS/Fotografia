@@ -1206,4 +1206,9 @@ td small {
   .row-actions {
     flex-direction: column;
   }
+
+  .badge.unknown {
+  background: #eeeeee;
+  color: #555555;
+}
 }
