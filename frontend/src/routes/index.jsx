@@ -9,6 +9,7 @@ import AvailabilityView from '../views/public/AvailabilityView';
 
 import RegisterView from '../views/portal/RegisterView';
 import CustomerLoginView from '../views/portal/CustomerLoginView';
+import CustomerPortalView from '../views/portal/CustomerPortalView';
 import BookingRequestView from '../views/portal/BookingRequestView';
 
 import DashboardView from '../views/dashboard';
@@ -26,7 +27,7 @@ export default function AppRoutes() {
     const [loginReturnView, setLoginReturnView] = useState('home');
     const [registerReturnView, setRegisterReturnView] = useState('home');
 
-    // Abrir login conservando la pantalla a la que debe regresar
+    // Abrir login conservando la pantalla anterior
     const openCustomerLogin = (returnView) => {
         setLoginReturnView(returnView);
         setPublicView('customer-login');
@@ -47,9 +48,22 @@ export default function AppRoutes() {
         );
     }
 
+    // Vista temporal para probar el portal del cliente
+    if (publicView === 'customer-portal') {
+        return (
+            <CustomerPortalView
+                onLogout={() => setPublicView('home')}
+            />
+        );
+    }
+
     // Acceso administrativo
     if (publicView === 'admin-login') {
-        return <LoginView onBack={() => setPublicView('home')} />;
+        return (
+            <LoginView
+                onBack={() => setPublicView('home')}
+            />
+        );
     }
 
     // Registro de clientes
@@ -71,6 +85,7 @@ export default function AppRoutes() {
                     setRegisterReturnView('customer-login');
                     setPublicView('register');
                 }}
+                onPreview={() => setPublicView('customer-portal')}
             />
         );
     }
@@ -86,7 +101,7 @@ export default function AppRoutes() {
         );
     }
 
-    // Calendario de disponibilidad
+    // Calendario público
     if (publicView === 'availability') {
         return (
             <AvailabilityView
