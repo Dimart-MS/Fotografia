@@ -20,7 +20,7 @@ def build_remote_client_lookup(api_key: str | None = None) -> Callable[[int], di
         token = api_key or os.environ.get("FOTO_API_KEY", "")
         try:
             response = httpx.get(
-                f"{base_url}/api/clientes/{client_id}",
+                f"{base_url}/api/internal/clientes/{client_id}",
                 headers={"Authorization": f"Bearer {token}"},
                 timeout=3,
             )

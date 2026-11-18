@@ -1,5 +1,5 @@
-
 import { useState } from 'react';
+import { registerCustomer } from '../../api/authService';
 
 import {
   Alert,
@@ -29,6 +29,7 @@ export default function RegisterView({ onBack, onLogin }) {
   const [form, setForm] = useState(initialForm);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -54,7 +55,7 @@ export default function RegisterView({ onBack, onLogin }) {
     setMessage('');
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     setError('');
@@ -99,9 +100,24 @@ export default function RegisterView({ onBack, onLogin }) {
       return;
     }
 
-    setMessage(
-      '¡Excelente! Tus datos cumplen con las validaciones. El registro se podrá completar cuando se integre el servicio de cuentas del backend.'
-    );
+    setLoading(true);
+
+    try {
+      await registerCustomer({
+        name,
+        email,
+        phone: form.phone,
+        address,
+        password: form.password
+      });
+
+      setMessage('¡Cuenta creada correctamente! Ya puedes iniciar sesión.');
+      setForm(initialForm);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -249,7 +265,7 @@ export default function RegisterView({ onBack, onLogin }) {
                 }
                 helperText={
                   form.confirmPassword &&
-                  form.password !== form.confirmPassword
+                    form.password !== form.confirmPassword
                     ? 'Las contraseñas no coinciden.'
                     : 'Escribe nuevamente tu contraseña.'
                 }
@@ -271,6 +287,7 @@ export default function RegisterView({ onBack, onLogin }) {
                 type="submit"
                 variant="contained"
                 size="large"
+                disabled={loading}
                 sx={{
                   py: 1.5,
                   bgcolor: '#68745B',
@@ -279,7 +296,7 @@ export default function RegisterView({ onBack, onLogin }) {
                   }
                 }}
               >
-                Crear mi cuenta
+                {loading ? 'Creando cuenta...' : 'Crear mi cuenta'}
               </Button>
 
             </Stack>

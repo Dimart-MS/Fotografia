@@ -7,7 +7,15 @@ import useStudio from '../../hooks/useStudio';
 // ==============================|| VISTA DE ACCESO AL ESTUDIO ||============================== //
 
 export default function LoginView({ onBack }) {
-  const { loginKey, setLoginKey, loading, error, handleLogin } = useStudio();
+  const {
+    loginEmail,
+    setLoginEmail,
+    loginPassword,
+    setLoginPassword,
+    loading,
+    error,
+    handleLogin
+  } = useStudio();
 
   return (
     <div className="login-shell">
@@ -49,19 +57,30 @@ export default function LoginView({ onBack }) {
           <span className="eyebrow">ACCESO ADMINISTRATIVO</span>
           <h2>Iniciar sesión</h2>
           <p>
-            Ingresa tu clave de acceso para administrar clientes, fechas y
-            reservas del estudio.
+            Ingresa tu correo electrónico y contraseña para administrar
+            clientes, fechas y reservaciones del estudio.
           </p>
 
           <form onSubmit={handleLogin}>
             <TextField
-              label="Clave del estudio"
+              label="Correo electrónico"
+              type="email"
+              required
+              fullWidth
+              value={loginEmail}
+              onChange={(e) => setLoginEmail(e.target.value)}
+              autoComplete="username"
+            />
+
+            <TextField
+              label="Contraseña"
               type="password"
               required
-              value={loginKey}
-              onChange={(e) => setLoginKey(e.target.value)}
+              fullWidth
+              value={loginPassword}
+              onChange={(e) => setLoginPassword(e.target.value)}
               autoComplete="current-password"
-              helperText="Acceso exclusivo para personal autorizado del estudio."
+              helperText="Acceso exclusivo para administradores del estudio."
             />
 
             {error && <Alert severity="error">{error}</Alert>}

@@ -1,32 +1,50 @@
-// ==============================|| CLIENTE HTTP CON AUTENTICACIÓN BEARER ||============================== //
+// ==============================|| CLIENTE HTTP ||============================== //
 
 /**
- * Ejecuta una petición HTTP hacia los servicios del estudio fotográfico.
- * Adjunta el token Bearer y normaliza los errores de validación de FastAPI/Pydantic.
+ * Ejecuta peticiones HTTP hacia FastAPI.
  *
- * @param {string} path - Ruta del endpoint (ej. '/api/clientes')
- * @param {RequestInit} options - Opciones de fetch
- * @param {string} accessKey - Clave de acceso del estudio
+ * token: JWT del usuario autenticado.
+ * Las rutas públicas pueden llamarse sin token.
  */
-export async function studioRequest(path, options = {}, accessKey = '') {
-  const response = await fetch(path, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${accessKey}`,
-      ...(options.headers || {})
-    }
-  });
+export async function studioRequest(path, options = {}, token = '') {
+  const headers = {
+    ...(options.body != null ? { 'Content-Type': 'application/json' } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(options.headers || {})
+  };
+
+  let response;
+
+  try {
+    response = await fetch(path, {
+      ...options,
+      headers
+    });
+  } catch {
+    throw new Error(
+      'No se pudo conectar con el servidor. Verifica que los servicios estén activos.'
+    );
+  }
 
   const payload = await response.json().catch(() => null);
 
   if (!response.ok) {
     const detail = payload?.detail;
+
     if (Array.isArray(detail)) {
-      const invalidFields = detail.map((item) => item.loc?.at(-1)).join(', ');
+      const invalidFields = detail
+        .map((item) => item.loc?.at(-1))
+        .filter(Boolean)
+        .join(', ');
+
       throw new Error(`Revisa los campos: ${invalidFields}`);
     }
-    throw new Error(detail || 'No se pudo conectar con el estudio. Intenta de nuevo.');
+
+    throw new Error(
+      typeof detail === 'string'
+        ? detail
+        : 'No se pudo completar la solicitud.'
+    );
   }
 
   return payload;

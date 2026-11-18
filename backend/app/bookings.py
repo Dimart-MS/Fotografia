@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 from datetime import date
 from typing import Any, Callable
 
-from fastapi import Depends, FastAPI, Query
+from fastapi import Depends, FastAPI, HTTPException, Query
 from sqlalchemy import MetaData
 
 from app.application.handlers import (
@@ -29,6 +29,9 @@ from app.domain.schemas import BookingInput, PaymentInput
 from app.infrastructure.clients_gateway import build_remote_client_lookup
 from app.infrastructure.database import check_database_health, database
 from app.infrastructure.repositories import ReservaRepository
+from app.core.security import require_user, require_role
+from app.domain.models import build_clients_table, build_users_table
+from app.infrastructure.users_repository import UserRepository
 
 __all__ = ["PACKAGES", "BookingInput", "PaymentInput", "create_app"]
 
@@ -47,14 +50,32 @@ def create_app(
     metadata = MetaData()
     bookings_table = build_bookings_table(metadata, engine.dialect.name)
     repository = ReservaRepository(engine, bookings_table)
+    clients_url = os.environ.get(
+        "CLIENTS_DATABASE_URL",
+        "mysql+pymysql://root@127.0.0.1:3306/fotografia_clientes",
+    )
+    users_engine = database(clients_url)
+    users_metadata = MetaData()
+    clients_table = build_clients_table(users_metadata)
+    users_table = build_users_table(users_metadata)
+    users_repository = UserRepository(
+        users_engine,
+        users_table,
+        clients_table,
+    )
+    current_user = require_user(users_repository)
+    admin_only = require_role(users_repository, "Administrador")
     auth = auth_dependency(api_key)
     lookup = client_lookup or build_remote_client_lookup(api_key)
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
         metadata.create_all(engine)
-        yield
-        engine.dispose()
+        try:
+            yield
+        finally:
+            engine.dispose()
+            users_engine.dispose()
 
     app = FastAPI(
         title="Fotografía - Servicio de reservas",
@@ -69,7 +90,7 @@ def create_app(
         check_database_health(engine)
         return {"status": "ok", "service": "bookings"}
 
-    @app.get("/api/paquetes", dependencies=[Depends(auth)], tags=["Catálogo"])
+    @app.get("/api/paquetes", dependencies=[Depends(current_user)], tags=["Catálogo"])
     def packages():
         query = GetPaquetesQuery()
         return query.execute()
@@ -79,29 +100,52 @@ def create_app(
         query = GetDisponibilidadQuery(repository)
         return query.execute(start=start, end=end)
 
-    @app.get("/api/reservas", dependencies=[Depends(auth)], tags=["Reservas"])
-    def list_bookings():
-        query = GetReservasQuery(repository)
-        return query.execute()
+    @app.get("/api/reservas", tags=["Reservas"])
+    def list_bookings(user=Depends(current_user)):
+        bookings = GetReservasQuery(repository).execute()
+        if user["role"] == "Administrador":
+            return bookings
+        return [
+            booking
+            for booking in bookings
+            if booking["client_id"] == user["client_id"]
+        ]
 
-    @app.get("/api/reservas/{booking_id}", dependencies=[Depends(auth)], tags=["Reservas"])
-    def get_booking(booking_id: int):
-        query = GetReservaByIdQuery(repository)
-        return query.execute(booking_id)
+    @app.get("/api/reservas/{booking_id}", tags=["Reservas"])
+    def get_booking(
+        booking_id: int,
+        user=Depends(current_user),
+    ):
+        booking = GetReservaByIdQuery(repository).execute(booking_id)
 
-    @app.post(
-        "/api/reservas",
-        status_code=201,
-        dependencies=[Depends(auth)],
-        tags=["Reservas"],
-    )
-    def add_booking(body: BookingInput):
-        command = AddReservaCommand(repository, lookup)
-        return command.execute(body)
+        if (
+            user["role"] != "Administrador"
+            and booking["client_id"] != user["client_id"]
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="No puedes consultar reservaciones de otros clientes",
+            )
+        return booking
+
+    @app.post("/api/reservas", status_code=201, tags=["Reservas"])
+    def add_booking(
+        body: BookingInput,
+        user=Depends(current_user),
+    ):
+        if (
+            user["role"] != "Administrador"
+            and body.client_id != user["client_id"]
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="Solo puedes registrar reservaciones a tu nombre",
+            )
+        return AddReservaCommand(repository, lookup).execute(body)
 
     @app.post(
         "/api/reservas/{booking_id}/confirmar",
-        dependencies=[Depends(auth)],
+        dependencies=[Depends(admin_only)],
         tags=["Reservas"],
     )
     def confirm(booking_id: int, body: PaymentInput):
@@ -110,7 +154,7 @@ def create_app(
 
     @app.post(
         "/api/reservas/{booking_id}/cancelar",
-        dependencies=[Depends(auth)],
+        dependencies=[Depends(admin_only)],
         tags=["Reservas"],
     )
     def cancel(booking_id: int):

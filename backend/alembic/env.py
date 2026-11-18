@@ -12,8 +12,11 @@ from alembic import context
 from sqlalchemy import MetaData, create_engine, pool
 from sqlalchemy.engine import make_url
 
-from app.domain.models import build_bookings_table, build_clients_table
-
+from app.domain.models import (
+    build_bookings_table,
+    build_clients_table,
+    build_users_table,
+)
 
 config = context.config
 
@@ -49,12 +52,11 @@ def get_database_name():
 def get_target_metadata(name):
     """Construye los modelos correspondientes a cada base de datos."""
     metadata = MetaData()
-
     if name == "clientes":
         build_clients_table(metadata)
+        build_users_table(metadata)
     else:
         build_bookings_table(metadata, "mysql")
-
     return metadata
 
 

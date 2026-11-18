@@ -1,5 +1,5 @@
-
 import { useState } from 'react';
+import { loginUser, getCurrentUser } from '../../api/authService';
 
 import {
   Alert,
@@ -18,7 +18,7 @@ import Icon from '../../ui-component/Icon';
 export default function CustomerLoginView({
   onBack,
   onRegister,
-  onPreview
+  onLoginSuccess
 }) {
   const [form, setForm] = useState({
     email: '',
@@ -27,6 +27,7 @@ export default function CustomerLoginView({
 
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -40,10 +41,13 @@ export default function CustomerLoginView({
     setMessage('');
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
-    const email = form.email.trim();
+    setError('');
+    setMessage('');
+
+    const email = form.email.trim().toLowerCase();
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setError('Ingresa un correo electrónico válido.');
@@ -55,9 +59,31 @@ export default function CustomerLoginView({
       return;
     }
 
-    setMessage(
-      'Tus datos tienen un formato válido. El inicio de sesión real estará disponible cuando se integre la autenticación del backend.'
-    );
+    setLoading(true);
+
+    try {
+      const session = await loginUser(email, form.password);
+
+      const token = session.access_token;
+
+      if (!token) {
+        throw new Error('El servidor no devolvió un token de acceso.');
+      }
+
+      const user = await getCurrentUser(token);
+
+      if (user.role !== 'Cliente') {
+        throw new Error(
+          'Esta pantalla es exclusiva para clientes. Utiliza el acceso administrativo.'
+        );
+      }
+
+      onLoginSuccess({ token, user });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -165,8 +191,9 @@ export default function CustomerLoginView({
                     bgcolor: '#59634B'
                   }
                 }}
+                disabled={loading}
               >
-                Iniciar sesión
+                {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
               </Button>
 
             </Stack>
@@ -184,62 +211,6 @@ export default function CustomerLoginView({
             >
               Crear una cuenta
             </Button>
-          </Box>
-
-          <Divider sx={{ my: 3 }}>
-            <Typography variant="caption" color="text.secondary">
-              VISTA DE DESARROLLO
-            </Typography>
-          </Divider>
-
-          {/* ACCESO TEMPORAL */}
-          <Box
-            sx={{
-              bgcolor: '#F8F6F0',
-              borderRadius: 3,
-              p: 2.5,
-              textAlign: 'center'
-            }}
-          >
-            <Icon name="eye" />
-
-            <Typography
-              variant="subtitle2"
-              sx={{ color: '#343B32', mt: 1 }}
-            >
-              ¿Quieres conocer tu portal?
-            </Typography>
-
-            <Typography
-              variant="body2"
-              sx={{ color: '#72766E', my: 1.5 }}
-            >
-              Puedes explorar las secciones del portal mediante una vista previa.
-            </Typography>
-
-            <Button
-              variant="outlined"
-              fullWidth
-              onClick={onPreview}
-              sx={{
-                borderColor: '#68745B',
-                color: '#68745B',
-                '&:hover': {
-                  bgcolor: '#EEF0E9',
-                  borderColor: '#59634B'
-                }
-              }}
-            >
-              Explorar portal de prueba
-            </Button>
-
-            <Typography
-              variant="caption"
-              display="block"
-              sx={{ color: '#888', mt: 1.5 }}
-            >
-              Esta opción no inicia una sesión real.
-            </Typography>
           </Box>
 
         </Paper>

@@ -81,3 +81,22 @@ def build_bookings_table(metadata: MetaData, dialect_name: str = "sqlite") -> Ta
         )
 
     return bookings_table
+
+
+def build_users_table(metadata: MetaData) -> Table:
+    """
+    Define la tabla de usuarios para autenticación y roles.
+
+    Cada cuenta puede tener el rol Administrador o Cliente.
+    Las contraseñas se almacenan mediante hash.
+    """
+    return Table(
+        "users",
+        metadata,
+        Column("id", Integer, primary_key=True, autoincrement=True),
+        Column("client_id", Integer, nullable=True),
+        Column("email", String(160), nullable=False, unique=True),
+        Column("password_hash", String(255), nullable=False),
+        Column("role", String(20), nullable=False, default="Cliente"),
+        Column("is_active", Integer, nullable=False, default=1),
+    )

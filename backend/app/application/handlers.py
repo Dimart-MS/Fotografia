@@ -12,6 +12,7 @@ from app.core.config import today
 from app.domain.models import PACKAGES
 from app.domain.schemas import BookingInput, ClientInput, ClientUpdateInput, PaymentInput
 from app.infrastructure.repositories import ClienteRepository, ReservaRepository
+from app.infrastructure.users_repository import UserRepository
 
 
 # ─── Queries y Commands: Módulo de Clientes (HU 06) ──────────────────────────
@@ -85,6 +86,45 @@ class UpdateClienteCommand:
                 detail="Cliente no encontrado",
             )
         return updated
+
+
+class UpdateClientProfileCommand:
+    """Actualiza el perfil y sincroniza el correo de acceso."""
+
+    def __init__(self, repository: UserRepository):
+        self.repository = repository
+
+    def execute(
+        self,
+        client_id: int,
+        body: ClientUpdateInput,
+    ) -> dict[str, Any]:
+
+        if client_id <= 0:
+            raise HTTPException(
+                status_code=422,
+                detail="El identificador del cliente debe ser positivo",
+            )
+
+        try:
+            updated = self.repository.update_client_profile(
+                client_id,
+                body,
+            )
+        except IntegrityError:
+            raise HTTPException(
+                status_code=409,
+                detail="Ya existe otro cliente con ese correo",
+            )
+
+        if updated is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Cliente no encontrado",
+            )
+
+        return updated
+
 
 # ─── Queries y Commands: Módulo de Reservas y Agenda (HU 02) ─────────────────
 

@@ -16,6 +16,7 @@ import {
   setSelectedBooking
 } from '../store/slices/booking';
 import { closeSnackbar, openSnackbar } from '../store/slices/snackbar';
+import { loginUser, getCurrentUser } from '../api/authService';
 
 // ==============================|| CONTEXTO DEL ESTUDIO CONECTADO A REDUX ||============================== //
 
@@ -34,7 +35,9 @@ export function StudioProvider({ children }) {
   );
 
   const [accessKey, setAccessKey] = useState('');
-  const [loginKey, setLoginKey] = useState('');
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
   const [page, setPage] = useState('inicio');
 
   const [saving, setSaving] = useState(false);
@@ -48,7 +51,7 @@ export function StudioProvider({ children }) {
     () => new Date(`${getLocalToday()}T12:00:00`)
   );
 
-  const loading = clientsLoading || bookingsLoading;
+  const loading = authLoading || clientsLoading || bookingsLoading;
 
   const setToast = useCallback((msg) => {
     if (msg) {
@@ -67,7 +70,9 @@ export function StudioProvider({ children }) {
         ]);
         return true;
       } catch (err) {
-        setError(err.message);
+        dispatch(clearClientsState());
+        dispatch(clearBookingsState());
+        setError(err.message || 'No se pudieron cargar los datos del estudio.');
         return false;
       }
     },
@@ -77,15 +82,41 @@ export function StudioProvider({ children }) {
   const handleLogin = async (event) => {
     event.preventDefault();
     setError('');
-    const success = await refreshStudioData(loginKey);
-    if (success) {
-      setAccessKey(loginKey);
+    setAuthLoading(true);
+
+    try {
+      const response = await loginUser(
+        loginEmail.trim(),
+        loginPassword
+      );
+
+      const token = response.access_token;
+      const user = await getCurrentUser(token);
+
+      if (user.role !== 'Administrador') {
+        throw new Error('Esta cuenta no tiene permisos de administrador.');
+      }
+
+      const success = await refreshStudioData(token);
+
+      if (!success) {
+        return;
+      }
+
+      setAccessKey(token);
+      setLoginPassword('');
+      setPage('inicio');
+    } catch (err) {
+      setError(err.message || 'No se pudo iniciar sesión.');
+    } finally {
+      setAuthLoading(false);
     }
   };
 
   const handleLogout = () => {
     setAccessKey('');
-    setLoginKey('');
+    setLoginEmail('');
+    setLoginPassword('');
     dispatch(clearClientsState());
     dispatch(clearBookingsState());
     dispatch(closeSnackbar());
@@ -168,8 +199,10 @@ export function StudioProvider({ children }) {
 
   const value = {
     accessKey,
-    loginKey,
-    setLoginKey,
+    loginEmail,
+    setLoginEmail,
+    loginPassword,
+    setLoginPassword,
     page,
     navigateToPage,
     clients,

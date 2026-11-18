@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import {
   Alert,
@@ -20,6 +20,9 @@ import {
 } from '@mui/material';
 
 import Icon from '../../ui-component/Icon';
+import { studioRequest } from '../../api/httpClient';
+import { fetchReservas } from '../../api/reservasService';
+import { updateCliente } from '../../api/clientesService';
 
 const sections = [
   { id: 'reservas', label: 'Mis reservaciones', icon: 'calendar' },
@@ -65,13 +68,62 @@ const formatDate = (value) => {
 const getStatusColor = (status) =>
   statusColors[String(status || '').toLowerCase()] || 'default';
 
-export default function CustomerPortalView({
-  onLogout,
-  reservations = [],
-  customer = null
-}) {
+export default function CustomerPortalView({ session, onLogout }) {
   const [activeSection, setActiveSection] = useState('reservas');
   const [selectedReservation, setSelectedReservation] = useState(null);
+
+  const [customer, setCustomer] = useState(null);
+  const [reservations, setReservations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+
+    const loadCustomerData = async () => {
+      setLoading(true);
+      setLoadError('');
+
+      try {
+        const [customerData, reservationData] = await Promise.all([
+          studioRequest(
+            `/api/clientes/${session.user.client_id}`,
+            { method: 'GET' },
+            session.token
+          ),
+          fetchReservas(session.token)
+        ]);
+
+        if (!active) return;
+
+        setCustomer(customerData);
+        setReservations(
+          Array.isArray(reservationData) ? reservationData : []
+        );
+
+        setProfileForm({
+          name: customerData.name || '',
+          email: customerData.email || '',
+          phone: customerData.phone || '',
+          address: customerData.address || ''
+        });
+      } catch (error) {
+        if (active) {
+          setLoadError(error.message);
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadCustomerData();
+
+    return () => {
+      active = false;
+    };
+  }, [session.token, session.user.client_id]);
 
   // Estados del formulario de perfil
   const [profileForm, setProfileForm] = useState({
@@ -82,6 +134,8 @@ export default function CustomerPortalView({
   });
 
   const [profileMessage, setProfileMessage] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileError, setProfileError] = useState('');
 
   // Resumen de pagos
   const paymentSummary = useMemo(() => {
@@ -274,12 +328,53 @@ export default function CustomerPortalView({
     />
   );
 
+  const handleSaveProfile = async () => {
+    setProfileMessage('');
+    setProfileError('');
+
+    if (!profileForm.name.trim() || !profileForm.email.trim()) {
+      setProfileError('El nombre y el correo son obligatorios.');
+      return;
+    }
+
+    setSavingProfile(true);
+
+    try {
+      const updatedCustomer = await updateCliente(
+        session.user.client_id,
+        profileForm,
+        session.token
+      );
+
+      const customerData = await studioRequest(
+        `/api/clientes/${session.user.client_id}`,
+        { method: 'GET' },
+        session.token
+      );
+
+      setCustomer(customerData);
+
+      setProfileForm({
+        name: customerData.name || '',
+        email: customerData.email || '',
+        phone: customerData.phone || '',
+        address: customerData.address || ''
+      });
+
+      setProfileMessage('Tus datos se actualizaron correctamente.');
+    } catch (error) {
+      setProfileError(error.message);
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
   // Sección de perfil
   const renderProfile = () => (
     <Box sx={{ mt: 3 }}>
       <Alert severity="info" sx={{ mb: 3 }}>
-        Puedes editar los campos para visualizar cómo funcionará tu perfil.
-        Los cambios todavía no se guardan en la base de datos.
+        Puedes actualizar tus datos personales desde este apartado.
+        Los cambios se guardarán en tu cuenta al presionar Guardar cambios.
       </Alert>
 
       <Stack spacing={2.5}>
@@ -341,11 +436,8 @@ export default function CustomerPortalView({
 
         <Button
           variant="contained"
-          onClick={() =>
-            setProfileMessage(
-              'La vista previa funciona correctamente. El guardado estará disponible cuando conectemos el servicio de clientes.'
-            )
-          }
+          onClick={handleSaveProfile}
+          disabled={savingProfile}
           sx={{
             alignSelf: { xs: 'stretch', sm: 'flex-start' },
             bgcolor: '#68745B',
@@ -354,12 +446,17 @@ export default function CustomerPortalView({
             }
           }}
         >
-          Guardar cambios
+          {savingProfile ? 'Guardando...' : 'Guardar cambios'}
         </Button>
 
         {profileMessage && (
           <Alert severity="success">
             {profileMessage}
+          </Alert>
+        )}
+        {profileError && (
+          <Alert severity="error">
+            {profileError}
           </Alert>
         )}
       </Stack>
@@ -486,6 +583,14 @@ export default function CustomerPortalView({
             );
           })}
         </Box>
+
+        {loading && <LinearProgress sx={{ mb: 2 }} />}
+
+        {loadError && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {loadError}
+          </Alert>
+        )}
 
         {/* CONTENIDO */}
         <Card

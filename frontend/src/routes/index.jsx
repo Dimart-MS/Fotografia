@@ -21,6 +21,7 @@ import useStudio from '../hooks/useStudio';
 
 export default function AppRoutes() {
     const { accessKey, page } = useStudio();
+    const [customerSession, setCustomerSession] = useState(null);
 
     const [publicView, setPublicView] = useState('home');
     const [bookingDate, setBookingDate] = useState('');
@@ -31,6 +32,16 @@ export default function AppRoutes() {
     const openCustomerLogin = (returnView) => {
         setLoginReturnView(returnView);
         setPublicView('customer-login');
+    };
+
+    const handleCustomerLoginSuccess = (session) => {
+        setCustomerSession(session);
+
+        if (loginReturnView === 'booking-request') {
+            setPublicView('booking-request');
+        } else {
+            setPublicView('customer-portal');
+        }
     };
 
     // Panel administrativo
@@ -48,11 +59,14 @@ export default function AppRoutes() {
         );
     }
 
-    // Vista temporal para probar el portal del cliente
-    if (publicView === 'customer-portal') {
+    if (publicView === 'customer-portal' && customerSession?.user?.role === 'Cliente') {
         return (
             <CustomerPortalView
-                onLogout={() => setPublicView('home')}
+                session={customerSession}
+                onLogout={() => {
+                    setCustomerSession(null);
+                    setPublicView('home');
+                }}
             />
         );
     }
@@ -85,7 +99,7 @@ export default function AppRoutes() {
                     setRegisterReturnView('customer-login');
                     setPublicView('register');
                 }}
-                onPreview={() => setPublicView('customer-portal')}
+                onLoginSuccess={handleCustomerLoginSuccess}
             />
         );
     }
@@ -95,8 +109,12 @@ export default function AppRoutes() {
         return (
             <BookingRequestView
                 selectedDate={bookingDate}
+                session={customerSession}
                 onBack={() => setPublicView('availability')}
                 onLogin={() => openCustomerLogin('booking-request')}
+                onReservationCreated={() => {
+                    setPublicView('customer-portal');
+                }}
             />
         );
     }

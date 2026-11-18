@@ -11,6 +11,7 @@ import {
   TextField,
   Typography
 } from '@mui/material';
+import { createReserva } from '../../api/reservasService';
 
 const EVENT_TYPES = ['Boda', 'XV años', 'Bautizo', 'Fiesta'];
 
@@ -42,10 +43,49 @@ const formatPrice = (amount) =>
 export default function BookingRequestView({
   selectedDate,
   onBack,
-  onLogin
+  onLogin,
+  session,
+  onReservationCreated
 }) {
   const [eventType, setEventType] = useState('');
   const [packageId, setPackageId] = useState('');
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleReservation = async () => {
+    setError('');
+
+    if (!eventType || !packageId || !selectedDate) {
+      setError('Completa todos los campos de la reservación.');
+      return;
+    }
+
+    if (!session?.token || !session?.user?.client_id) {
+      onLogin();
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const reservation = await createReserva(
+        {
+          client_id: session.user.client_id,
+          event_date: selectedDate,
+          event_type: eventType,
+          package: packageId
+        },
+        session.token
+      );
+
+      onReservationCreated(reservation);
+    } catch (err) {
+      setError(err.message || 'No se pudo registrar la reservación.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const selectedPackage = useMemo(
     () => PACKAGES.find((item) => item.id === packageId),
@@ -57,11 +97,11 @@ export default function BookingRequestView({
 
   const formattedDate = selectedDate
     ? new Intl.DateTimeFormat('es-MX', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-      }).format(new Date(`${selectedDate}T12:00:00`))
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    }).format(new Date(`${selectedDate}T12:00:00`))
     : 'No se ha seleccionado una fecha';
 
   return (
@@ -221,24 +261,28 @@ export default function BookingRequestView({
               </Stack>
             </Box>
 
-            <Alert severity="info">
-              Esta es una solicitud preliminar. La fecha no queda reservada
-              hasta que el estudio confirme la disponibilidad y se cumplan
-              las condiciones del anticipo.
-            </Alert>
+            {error && (
+              <Alert severity="error">
+                {error}
+              </Alert>
+            )}
 
             <Button
               variant="contained"
               size="large"
-              disabled={!eventType || !packageId || !selectedDate}
-              onClick={onLogin}
+              disabled={!eventType || !packageId || !selectedDate || loading}
+              onClick={handleReservation}
               sx={{
                 py: 1.5,
                 bgcolor: '#68745B',
                 '&:hover': { bgcolor: '#59634B' }
               }}
             >
-              Iniciar sesión para continuar
+              {loading
+                ? 'Registrando reservación...'
+                : session?.token
+                  ? 'Enviar solicitud de reservación'
+                  : 'Iniciar sesión para continuar'}
             </Button>
 
             <Typography
@@ -246,7 +290,9 @@ export default function BookingRequestView({
               color="text.secondary"
               textAlign="center"
             >
-              Necesitas una cuenta para enviar tu solicitud de reservación.
+              {session?.token
+                ? 'Tu solicitud se registrará como pendiente de anticipo.'
+                : 'Necesitas una cuenta para enviar tu solicitud de reservación.'}
             </Typography>
           </Stack>
         </Paper>

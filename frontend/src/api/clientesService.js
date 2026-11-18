@@ -25,3 +25,15 @@ export async function createCliente(clientData, accessKey) {
     accessKey
   );
 }
+
+
+export async function updateCliente(clientId, customerData, token) {
+    return studioRequest(
+        `/api/clientes/${clientId}`,
+        {
+            method: 'PUT',
+            body: JSON.stringify(customerData)
+        },
+        token
+    );
+}
