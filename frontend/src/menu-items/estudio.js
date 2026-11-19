@@ -32,7 +32,16 @@ const estudioMenu = {
       heading: 'Agenda y reservas',
       subtitle: 'Disponibilidad mensual, solicitudes pendientes y confirmación de anticipos.',
       icon: 'calendar'
-    }
+    },
+    {
+    id: 'paquetes',
+    title: 'Paquetes',
+    breadcrumb: 'Paquetes',
+    eyebrow: 'CATÁLOGO DE SERVICIOS',
+    heading: 'Paquetes fotográficos',
+    subtitle: 'Administra los paquetes, precios y servicios que ofrece el estudio.',
+    icon: 'package'
+  }
   ]
 };
 

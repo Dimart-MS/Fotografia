@@ -23,6 +23,8 @@ export default function MainLayout({ children }) {
     estudioMenu.children.find((item) => item.id === page) || estudioMenu.children[0];
 
   const handlePrimaryAction = () => {
+    if (page === 'paquetes') return;
+
     if (page === 'clientes' || !clients.length) {
       openClientModal();
     } else {
@@ -32,7 +34,6 @@ export default function MainLayout({ children }) {
 
   const primaryActionLabel =
     page === 'clientes' || !clients.length ? 'Nuevo cliente' : 'Nueva reserva';
-
   return (
     <div className="app-shell">
       <Sidebar />
@@ -51,6 +52,7 @@ export default function MainLayout({ children }) {
               variant="contained"
               startIcon={<Icon name="plus" />}
               onClick={handlePrimaryAction}
+              disabled={page === 'paquetes'}
             >
               {primaryActionLabel}
             </Button>

@@ -1,3 +1,4 @@
+
 """Validaciones para las operaciones de reservaciones."""
 
 from datetime import date
@@ -15,7 +16,7 @@ class ReservaCrear(BaseModel):
     event_type: Literal[
         "Boda", "XV años", "Bautizo", "Fiesta", "Otro"
     ]
-    package: Literal["foto", "video", "combinado"]
+    package: str = Field(min_length=1)
 
 
 class AnticipoConfirmar(BaseModel):

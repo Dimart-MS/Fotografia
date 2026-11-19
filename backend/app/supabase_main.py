@@ -67,9 +67,10 @@ async def lifespan(app: FastAPI):
         )
 
         app.state.paquetes_repo = SupabasePaquetesRepository(
-            engine,
-            tablas["paquetes"],
-        )
+    engine,
+    tablas["paquetes"],
+    tablas["auditoria"],
+)
 
         app.state.reservas_repo = SupabaseReservasRepository(
             engine,
@@ -175,7 +176,10 @@ app.include_router(
 )
 
 app.include_router(
-    create_paquetes_router(usuario_autenticado)
+    create_paquetes_router(
+        solo_administrador,
+        usuario_autenticado,
+    )
 )
 
 app.include_router(
