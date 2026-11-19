@@ -1,11 +1,12 @@
-import { Button } from '@mui/material';
+
+import { Button, Chip } from '@mui/material';
 import Icon from '../../ui-component/Icon';
 import StatCard from '../../ui-component/cards/StatCard';
 import BookingsTable from '../../ui-component/tables/BookingsTable';
 import { formatPrettyDate, getLocalToday } from '../../utils/formatters';
 import useStudio from '../../hooks/useStudio';
 
-// ==============================|| VISTA GENERAL DEL ESTUDIO (DASHBOARD) ||============================== //
+// ==============================|| DASHBOARD ADMINISTRATIVO ||============================== //
 
 export default function DashboardView() {
   const {
@@ -16,72 +17,122 @@ export default function DashboardView() {
     openClientModal,
     openBookingModal,
     openConfirmPaymentModal,
-    openCancelBookingModal
+    openCancelBookingModal,
+    openBookingDetailsModal
   } = useStudio();
 
   const todayStr = getLocalToday();
-  const confirmedBookings = bookings.filter((b) => b.status === 'Confirmada');
-  const pendingBookings = bookings.filter((b) => b.status === 'Pendiente de anticipo');
+
+  const confirmedBookings = bookings.filter(
+    (booking) => booking.status === 'Confirmada'
+  );
+
+  const pendingBookings = bookings.filter(
+    (booking) => booking.status === 'Pendiente de anticipo'
+  );
+
+  const upcomingBookings = bookings
+    .filter(
+      (booking) =>
+        booking.status !== 'Cancelada' &&
+        booking.event_date >= todayStr
+    )
+    .sort((a, b) => a.event_date.localeCompare(b.event_date));
 
   const nextConfirmedEvent = confirmedBookings
-    .filter((b) => b.event_date >= todayStr)
+    .filter((booking) => booking.event_date >= todayStr)
     .sort((a, b) => a.event_date.localeCompare(b.event_date))[0];
 
-  const upcomingRows = bookings
-  .filter((b) => b.status !== 'Cancelada' && b.event_date >= todayStr)
-  .sort((a, b) => a.event_date.localeCompare(b.event_date))
-  .slice(0, 5);
+  const upcomingRows = upcomingBookings.slice(0, 5);
 
   const summaryStats = [
-    { count: clients.length, label: 'Clientes registrados', icon: 'people' },
-    { count: confirmedBookings.length, label: 'Eventos confirmados', icon: 'calendar' },
-    { count: pendingBookings.length, label: 'Solicitudes por confirmar', icon: 'camera' }
+    {
+      count: clients.length,
+      label: 'Clientes registrados',
+      icon: 'people'
+    },
+    {
+      count: confirmedBookings.length,
+      label: 'Reservas confirmadas',
+      icon: 'calendar'
+    },
+    {
+      count: pendingBookings.length,
+      label: 'Pendientes de anticipo',
+      icon: 'camera'
+    },
+    {
+      count: upcomingBookings.length,
+      label: 'Próximos eventos',
+      icon: 'calendar'
+    }
+  ];
+
+  const totalBookings = bookings.length;
+
+  const bookingStatusSummary = [
+    {
+      label: 'Confirmadas',
+      count: confirmedBookings.length,
+      color: '#52724c'
+    },
+    {
+      label: 'Pendientes de anticipo',
+      count: pendingBookings.length,
+      color: '#c29a56'
+    },
+    {
+      label: 'Canceladas',
+      count: bookings.filter(
+        (booking) => booking.status === 'Cancelada'
+      ).length,
+      color: '#a65353'
+    }
   ];
 
   return (
     <>
-      <section className="hero">
-        <img
-          src="/wedding.jpg"
-          alt="Cobertura fotográfica de evento"
-        />
-        <div className="hero-shade" />
-        <div className="hero-content">
-          <span className="eyebrow light">CONTROL DE COBERTURAS</span>
-          <h2>Agenda de eventos y contrataciones</h2>
-          <p>Consulta disponibilidad, registra clientes y gestiona confirmaciones de fecha.</p>
-          <button type="button" onClick={() => navigateToPage('reservas')}>
-            Ir al calendario de reservas <Icon name="arrow" />
-          </button>
+      {/* INDICADORES */}
+      <section className="dashboard-section">
+        <div className="dashboard-section-heading">
+          <h2>Resumen general</h2>
+          <p>Indicadores actuales del estudio.</p>
         </div>
-        <div className="hero-caption">FOTOGRAFÍA &amp; VIDEO SOCIAL</div>
+
+        <div className="dashboard-stats">
+          {summaryStats.map((stat) => (
+            <StatCard
+              key={stat.label}
+              count={stat.count}
+              label={stat.label}
+              icon={stat.icon}
+            />
+          ))}
+        </div>
       </section>
 
-      <section className="stats" aria-label="Resumen del estudio">
-        {summaryStats.map((stat) => (
-          <StatCard
-            key={stat.label}
-            count={stat.count}
-            label={stat.label}
-            icon={stat.icon}
-          />
-        ))}
-      </section>
-
+      {/* RESERVACIONES Y PRÓXIMO EVENTO */}
       <div className="overview-grid">
         <section className="panel">
           <div className="section-heading">
             <div>
-              <span className="eyebrow">AGENDA RECIENTE</span>
+              <span className="eyebrow">
+                AGENDA DEL ESTUDIO
+              </span>
+
               <h2>Próximos eventos</h2>
+
+              <p>
+                Reservaciones programadas y próximas coberturas.
+              </p>
             </div>
-            <button
-              type="button"
-              className="text-button"
+
+            <Button
+              variant="text"
               onClick={() => navigateToPage('reservas')}
             >
-              Ver todas las reservas <Icon name="arrow" size={16} />
-            </button>
+              Ver agenda completa
+            </Button>
           </div>
 
           <BookingsTable
@@ -93,30 +144,111 @@ export default function DashboardView() {
             onOpenCancelBooking={openCancelBookingModal}
             onCreateBooking={openBookingModal}
             onCreateClient={openClientModal}
+            onOpenBookingDetails={openBookingDetailsModal}
           />
         </section>
 
         <section className="next-card">
-          <span className="eyebrow">PRÓXIMA COBERTURA CONFIRMADA</span>
-          <Icon name="camera" size={28} />
+          <span className="eyebrow">
+            PRÓXIMA COBERTURA CONFIRMADA
+          </span>
+
+          <Icon name="camera" size={30} />
+
           <h2>
             {nextConfirmedEvent
               ? nextConfirmedEvent.client_name
-              : 'Sin coberturas próximas'}
+              : 'Sin eventos confirmados'}
           </h2>
-          <p>
-            {nextConfirmedEvent
-              ? `${nextConfirmedEvent.event_type} · ${formatPrettyDate(nextConfirmedEvent.event_date)}`
-              : 'Las reservas con anticipo confirmado aparecerán destacadas en esta sección.'}
-          </p>
-          <Button variant="outlined" onClick={() => navigateToPage('reservas')}>
-            Abrir calendario
+
+          {nextConfirmedEvent ? (
+            <>
+              <p>
+                {nextConfirmedEvent.event_type}
+              </p>
+
+              <p>
+                {formatPrettyDate(
+                  nextConfirmedEvent.event_date
+                )}
+              </p>
+
+              <Chip
+                label="Confirmada"
+                size="small"
+                sx={{
+                  bgcolor: '#e8f0e2',
+                  color: '#52724c',
+                  fontWeight: 600
+                }}
+              />
+            </>
+          ) : (
+            <p>
+              Cuando se confirme una reservación,
+              aparecerá aquí la próxima cobertura.
+            </p>
+          )}
+
+          <Button
+            variant="outlined"
+            onClick={() => navigateToPage('reservas')}
+            sx={{ mt: 3 }}
+          >
+            Consultar reservaciones
           </Button>
-          <div className="next-bottom">
-            ESTADO DE AGENDA <span>↗</span>
-          </div>
         </section>
       </div>
+
+      {/* ESTADO DE LAS RESERVACIONES */}
+      <section className="panel dashboard-status-panel">
+        <div className="section-heading">
+          <div>
+            <span className="eyebrow">
+              CONTROL DE RESERVACIONES
+            </span>
+
+            <h2>Estado de reservaciones</h2>
+
+            <p>
+              Distribución de las reservaciones registradas.
+            </p>
+          </div>
+        </div>
+
+        <div className="dashboard-status-list">
+          {bookingStatusSummary.map((item) => {
+            const percentage = totalBookings
+              ? (item.count / totalBookings) * 100
+              : 0;
+
+            return (
+              <div
+                key={item.label}
+                className="dashboard-status-item"
+              >
+                <div className="dashboard-status-label">
+                  <span>{item.label}</span>
+
+                  <strong>
+                    {item.count} ({Math.round(percentage)}%)
+                  </strong>
+                </div>
+
+                <div className="dashboard-progress-track">
+                  <div
+                    className="dashboard-progress-fill"
+                    style={{
+                      width: `${percentage}%`,
+                      backgroundColor: item.color
+                    }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
     </>
   );
 }

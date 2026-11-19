@@ -54,7 +54,7 @@ p {
 
 h1,
 h2,
-.brand > span {
+.brand>span {
   font-family: Georgia, 'Times New Roman', serif;
   font-weight: 400;
 }
@@ -87,7 +87,7 @@ p {
   color: #254c41;
 }
 
-.brand > span {
+.brand>span {
   font-size: 21px;
   letter-spacing: -0.5px;
   white-space: nowrap;
@@ -119,7 +119,7 @@ p {
   background: #3d483a;
 }
 
-.login-photo > img {
+.login-photo>img {
   position: absolute;
   width: 100%;
   height: 100%;
@@ -130,12 +130,10 @@ p {
 .photo-shade {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    0deg,
-    rgba(13, 30, 24, 0.82) 0%,
-    rgba(13, 30, 24, 0.25) 60%,
-    rgba(13, 30, 24, 0.05) 100%
-  );
+  background: linear-gradient(0deg,
+      rgba(13, 30, 24, 0.82) 0%,
+      rgba(13, 30, 24, 0.25) 60%,
+      rgba(13, 30, 24, 0.05) 100%);
 }
 
 .login-story {
@@ -240,7 +238,7 @@ p {
   padding: 0 6px;
 }
 
-.sidebar .brand > span {
+.sidebar .brand>span {
   font-size: 19px;
 }
 
@@ -281,7 +279,7 @@ p {
   font-weight: 600;
 }
 
-.sidebar nav button > span {
+.sidebar nav button>span {
   margin-left: auto;
   background: #d7e1d4;
   padding: 2px 7px;
@@ -435,7 +433,7 @@ main {
   background: #3d4f38;
 }
 
-.hero > img {
+.hero>img {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -447,12 +445,10 @@ main {
 .hero-shade {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    90deg,
-    rgba(16, 36, 26, 0.88) 0%,
-    rgba(16, 36, 26, 0.45) 55%,
-    rgba(16, 36, 26, 0.1) 100%
-  );
+  background: linear-gradient(90deg,
+      rgba(16, 36, 26, 0.88) 0%,
+      rgba(16, 36, 26, 0.45) 55%,
+      rgba(16, 36, 26, 0.1) 100%);
 }
 
 .hero-content {
@@ -533,7 +529,7 @@ main {
   color: #222922;
 }
 
-.stat div > span {
+.stat div>span {
   font-size: 11px;
   color: #747a70;
 }
@@ -551,7 +547,7 @@ main {
   gap: 18px;
 }
 
-.overview-grid > * {
+.overview-grid>* {
   min-width: 0;
 }
 
@@ -693,13 +689,13 @@ td small {
   margin-bottom: 18px;
 }
 
-.next-card > .eyebrow {
+.next-card>.eyebrow {
   font-size: 8.5px;
   letter-spacing: 1.4px;
   margin-bottom: 14px;
 }
 
-.next-card > svg {
+.next-card>svg {
   color: #4f6448;
 }
 
@@ -925,7 +921,7 @@ td small {
   color: #7e8774;
 }
 
-.calendar-hint > span:last-child {
+.calendar-hint>span:last-child {
   margin-left: auto;
 }
 
@@ -966,7 +962,7 @@ td small {
   padding-top: 8px;
 }
 
-.form-fields > p {
+.form-fields>p {
   font-size: 13px;
   margin: 0;
 }
@@ -983,7 +979,7 @@ td small {
   border-radius: 6px;
 }
 
-.price-summary > div {
+.price-summary>div {
   display: flex;
   justify-content: space-between;
   margin-bottom: 10px;
@@ -1106,7 +1102,7 @@ td small {
     gap: 6px;
   }
 
-  .sidebar nav button > span,
+  .sidebar nav button>span,
   .workspace-label,
   .side-note {
     display: none;
@@ -1208,7 +1204,487 @@ td small {
   }
 
   .badge.unknown {
+    background: #eeeeee;
+    color: #555555;
+  }
+}
+
+
+/* ==========================================================
+   LUZ & MEMORIA
+   SISTEMA DE DISEÑO UNIFICADO
+   ========================================================== */
+
+:root {
+  /* Colores principales */
+  --lm-primary: #254b40;
+  --lm-primary-hover: #193a31;
+  --lm-olive: #68745b;
+
+  /* Fondos */
+  --lm-background: #f8f6f0;
+  --lm-surface: #ffffff;
+  --lm-surface-soft: #f4f5ef;
+  --lm-surface-accent: #eaece5;
+
+  /* Textos */
+  --lm-text: #343b32;
+  --lm-text-secondary: #72796d;
+  --lm-text-muted: #8a9085;
+
+  /* Bordes */
+  --lm-border: #e2e5dd;
+  --lm-border-hover: #aab8a1;
+
+  /* Estados */
+  --lm-success: #52724c;
+  --lm-success-bg: #e8f0e2;
+
+  --lm-warning: #946b35;
+  --lm-warning-bg: #f5ede0;
+
+  --lm-danger: #a65353;
+  --lm-danger-bg: #f8e8e8;
+
+  /* Espaciados */
+  --lm-space-1: 4px;
+  --lm-space-2: 8px;
+  --lm-space-3: 12px;
+  --lm-space-4: 16px;
+  --lm-space-5: 20px;
+  --lm-space-6: 24px;
+  --lm-space-8: 32px;
+
+  /* Bordes redondeados */
+  --lm-radius-sm: 8px;
+  --lm-radius-md: 12px;
+  --lm-radius-lg: 16px;
+
+  /* Sombras */
+  --lm-shadow-sm: 0 2px 8px rgba(30, 45, 30, 0.04);
+  --lm-shadow-md: 0 8px 24px rgba(30, 45, 30, 0.07);
+
+  /* Tipografía */
+  --lm-font-body: Inter, Arial, sans-serif;
+  --lm-font-heading: Georgia, 'Times New Roman', serif;
+}
+
+/* ==========================================================
+   ESTRUCTURA ADMINISTRATIVA
+   ========================================================== */
+
+.app-shell {
+  background: var(--lm-background);
+  color: var(--lm-text);
+}
+
+.main-shell {
+  background: var(--lm-background);
+}
+
+.main-shell main {
+  min-width: 0;
+  padding: 28px 32px 20px;
+}
+
+/* ==========================================================
+   NAVEGACIÓN LATERAL
+   ========================================================== */
+
+.sidebar {
+  background: var(--lm-surface);
+  border-right: 1px solid var(--lm-border);
+}
+
+.sidebar nav button {
+  border-radius: var(--lm-radius-sm);
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.sidebar nav button:hover {
+  background: var(--lm-surface-soft);
+  color: var(--lm-primary);
+}
+
+.sidebar nav button.active {
+  background: #e9efe8;
+  color: var(--lm-primary);
+  font-weight: 600;
+}
+
+/* ==========================================================
+   ENCABEZADO SUPERIOR
+   ========================================================== */
+
+.topbar {
+  background: var(--lm-surface);
+  border-bottom: 1px solid var(--lm-border);
+  min-height: 60px;
+}
+
+/* ==========================================================
+   TARJETAS Y PANELES
+   ========================================================== */
+
+.app-shell .panel,
+.app-shell .client-card,
+.app-shell .next-card {
+  border-radius: var(--lm-radius-lg);
+  border: 1px solid var(--lm-border);
+}
+
+.app-shell .panel {
+  background: var(--lm-surface);
+}
+
+.app-shell .client-card {
+  background: var(--lm-surface);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.app-shell .client-card:hover {
+  border-color: var(--lm-border-hover);
+  box-shadow: var(--lm-shadow-sm);
+}
+
+/* ==========================================================
+   TABLAS ADMINISTRATIVAS
+   ========================================================== */
+
+.app-shell table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.app-shell th {
+  background: #f7f8f4;
+  color: var(--lm-text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+}
+
+.app-shell td {
+  color: var(--lm-text);
+  font-size: 12px;
+}
+
+.app-shell tbody tr:hover {
+  background: #fafbf8;
+}
+
+/* ==========================================================
+   ESTADOS DE RESERVACIONES
+   ========================================================== */
+
+.app-shell .badge {
+  border-radius: 6px;
+  padding: 5px 9px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.app-shell .badge.confirmed {
+  background: var(--lm-success-bg);
+  color: var(--lm-success);
+}
+
+.app-shell .badge.pending {
+  background: var(--lm-warning-bg);
+  color: var(--lm-warning);
+}
+
+.app-shell .badge.cancelled {
+  background: #eceee8;
+  color: #72786e;
+}
+
+.app-shell .badge.unknown {
   background: #eeeeee;
   color: #555555;
 }
+
+/* ==========================================================
+   FORMULARIOS
+   ========================================================== */
+
+.app-shell .MuiOutlinedInput-root {
+  border-radius: var(--lm-radius-sm);
+  background: var(--lm-surface);
+}
+
+.app-shell .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: var(--lm-primary);
+}
+
+.app-shell .MuiInputLabel-root.Mui-focused {
+  color: var(--lm-primary);
+}
+
+/* ==========================================================
+   BOTONES
+   ========================================================== */
+
+.app-shell .MuiButton-root {
+  border-radius: var(--lm-radius-sm);
+  text-transform: none;
+  font-weight: 600;
+}
+
+.app-shell .MuiButton-containedPrimary {
+  background-color: var(--lm-primary);
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.app-shell .MuiButton-containedPrimary:hover {
+  background-color: var(--lm-primary-hover);
+  box-shadow: none;
+}
+
+.app-shell .MuiButton-outlinedPrimary {
+  border-color: var(--lm-border-hover);
+  color: var(--lm-primary);
+}
+
+.app-shell .MuiButton-outlinedPrimary:hover {
+  border-color: var(--lm-primary);
+  background: #f1f4ee;
+}
+
+/* ==========================================================
+   CALENDARIO
+   ========================================================== */
+
+.app-shell .calendar-day {
+  border-radius: var(--lm-radius-sm);
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.app-shell .calendar-day.today {
+  border-color: var(--lm-primary);
+}
+
+.app-shell .calendar-day.occupied {
+  background: var(--lm-success-bg);
+  color: var(--lm-success);
+}
+
+.app-shell .calendar-day:not(:disabled):hover {
+  border-color: var(--lm-border-hover);
+}
+
+/* ==========================================================
+   ACCESIBILIDAD
+   ========================================================== */
+
+.app-shell button:focus-visible,
+.app-shell a:focus-visible,
+.app-shell input:focus-visible {
+  outline: 2px solid var(--lm-primary);
+  outline-offset: 3px;
+}
+
+/* ==========================================================
+   RESPONSIVE
+   ========================================================== */
+
+@media (max-width: 1100px) {
+  .main-shell main {
+    padding: 24px 20px;
+  }
+}
+
+@media (max-width: 760px) {
+  .main-shell main {
+    padding: 18px 16px;
+  }
+
+  .app-shell .section-heading {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .app-shell .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .app-shell .overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .app-shell .calendar-grid {
+    gap: 3px;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-shell .stats {
+    grid-template-columns: 1fr;
+  }
+
+  .app-shell .client-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* ==========================================================
+   DASHBOARD ADMINISTRATIVO - LUZ & MEMORIA
+   ========================================================== */
+
+.dashboard-intro {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  padding: 28px;
+  margin-bottom: 28px;
+  background: var(--lm-surface-accent);
+  border: 1px solid var(--lm-border);
+  border-radius: var(--lm-radius-lg);
+}
+
+.dashboard-intro h2 {
+  font-size: 28px;
+  color: var(--lm-text);
+  margin-bottom: 8px;
+}
+
+.dashboard-intro p {
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.dashboard-date {
+  font-size: 12px;
+  color: var(--lm-text-secondary);
+}
+
+.dashboard-intro-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.dashboard-section {
+  margin-bottom: 24px;
+}
+
+.dashboard-section-heading {
+  margin-bottom: 16px;
+}
+
+.dashboard-section-heading h2 {
+  font-size: 22px;
+  margin-bottom: 5px;
+}
+
+.dashboard-section-heading p {
+  font-size: 12px;
+  margin-bottom: 0;
+}
+
+.dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.dashboard-stats .stat {
+  min-width: 0;
+  margin: 0;
+}
+
+.dashboard-status-panel {
+  padding-bottom: 24px;
+}
+
+.dashboard-status-list {
+  display: grid;
+  gap: 22px;
+  padding: 8px 24px;
+}
+
+.dashboard-status-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  color: var(--lm-text-secondary);
+}
+
+.dashboard-status-label strong {
+  color: var(--lm-text);
+}
+
+.dashboard-progress-track {
+  width: 100%;
+  height: 8px;
+  background: #edf0e9;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.dashboard-progress-fill {
+  height: 100%;
+  border-radius: 20px;
+  transition: width 0.3s ease;
+}
+
+.dashboard-shortcuts {
+  padding-bottom: 24px;
+}
+
+.dashboard-shortcut-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  padding: 8px 24px;
+}
+
+.dashboard-shortcut-grid .MuiButton-root {
+  min-height: 56px;
+  justify-content: flex-start;
+  text-align: left;
+}
+
+@media (max-width: 1200px) {
+  .dashboard-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .dashboard-intro {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 20px;
+  }
+
+  .dashboard-intro h2 {
+    font-size: 24px;
+  }
+
+  .dashboard-intro-actions {
+    width: 100%;
+  }
+
+  .dashboard-shortcut-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-stats {
+    grid-template-columns: 1fr;
+  }
 }

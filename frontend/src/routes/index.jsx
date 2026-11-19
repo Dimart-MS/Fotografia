@@ -8,7 +8,6 @@ import HomeView from '../views/public/HomeView';
 import AvailabilityView from '../views/public/AvailabilityView';
 
 import RegisterView from '../views/portal/RegisterView';
-import CustomerLoginView from '../views/portal/CustomerLoginView';
 import CustomerPortalView from '../views/portal/CustomerPortalView';
 import BookingRequestView from '../views/portal/BookingRequestView';
 
@@ -20,28 +19,46 @@ import StudioDialogManager from '../views/modals/StudioDialogManager';
 import useStudio from '../hooks/useStudio';
 
 export default function AppRoutes() {
-    const { accessKey, page } = useStudio();
-    const [customerSession, setCustomerSession] = useState(null);
+    const {
+        accessKey,
+        page,
+        activateAdminSession
+    } = useStudio();
 
+    const [customerSession, setCustomerSession] = useState(null);
     const [publicView, setPublicView] = useState('home');
     const [bookingDate, setBookingDate] = useState('');
     const [loginReturnView, setLoginReturnView] = useState('home');
     const [registerReturnView, setRegisterReturnView] = useState('home');
 
-    // Abrir login conservando la pantalla anterior
-    const openCustomerLogin = (returnView) => {
+    // Abrir un único login
+    const openLogin = (returnView = 'home') => {
         setLoginReturnView(returnView);
-        setPublicView('customer-login');
+        setPublicView('login');
     };
 
-    const handleCustomerLoginSuccess = (session) => {
-        setCustomerSession(session);
+    // Redirección automática según el rol
+    const handleLoginSuccess = async (session) => {
+        const role = session.user.role;
 
-        if (loginReturnView === 'booking-request') {
-            setPublicView('booking-request');
-        } else {
-            setPublicView('customer-portal');
+        if (role === 'Administrador') {
+            await activateAdminSession(session.token);
+            setCustomerSession(null);
+            return;
         }
+
+        if (role === 'Cliente') {
+            setCustomerSession(session);
+
+            if (loginReturnView === 'booking-request') {
+                setPublicView('booking-request');
+            } else {
+                setPublicView('customer-portal');
+            }
+            return;
+        }
+
+        throw new Error('El rol no tiene un panel disponible.');
     };
 
     // Panel administrativo
@@ -59,7 +76,11 @@ export default function AppRoutes() {
         );
     }
 
-    if (publicView === 'customer-portal' && customerSession?.user?.role === 'Cliente') {
+    // Portal de cliente
+    if (
+        publicView === 'customer-portal' &&
+        customerSession?.user?.role === 'Cliente'
+    ) {
         return (
             <CustomerPortalView
                 session={customerSession}
@@ -71,11 +92,16 @@ export default function AppRoutes() {
         );
     }
 
-    // Acceso administrativo
-    if (publicView === 'admin-login') {
+    // Login unificado
+    if (publicView === 'login') {
         return (
             <LoginView
                 onBack={() => setPublicView('home')}
+                onRegister={() => {
+                    setRegisterReturnView('login');
+                    setPublicView('register');
+                }}
+                onLoginSuccess={handleLoginSuccess}
             />
         );
     }
@@ -85,21 +111,7 @@ export default function AppRoutes() {
         return (
             <RegisterView
                 onBack={() => setPublicView(registerReturnView)}
-                onLogin={() => openCustomerLogin('register')}
-            />
-        );
-    }
-
-    // Inicio de sesión de clientes
-    if (publicView === 'customer-login') {
-        return (
-            <CustomerLoginView
-                onBack={() => setPublicView(loginReturnView)}
-                onRegister={() => {
-                    setRegisterReturnView('customer-login');
-                    setPublicView('register');
-                }}
-                onLoginSuccess={handleCustomerLoginSuccess}
+                onLogin={() => openLogin('register')}
             />
         );
     }
@@ -111,7 +123,7 @@ export default function AppRoutes() {
                 selectedDate={bookingDate}
                 session={customerSession}
                 onBack={() => setPublicView('availability')}
-                onLogin={() => openCustomerLogin('booking-request')}
+                onLogin={() => openLogin('booking-request')}
                 onReservationCreated={() => {
                     setPublicView('customer-portal');
                 }}
@@ -135,13 +147,12 @@ export default function AppRoutes() {
     // Página principal pública
     return (
         <HomeView
-            onAdminAccess={() => setPublicView('admin-login')}
+            onLogin={() => openLogin('home')}
             onAvailability={() => setPublicView('availability')}
             onRegister={() => {
                 setRegisterReturnView('home');
                 setPublicView('register');
             }}
-            onCustomerLogin={() => openCustomerLogin('home')}
         />
     );
 }
