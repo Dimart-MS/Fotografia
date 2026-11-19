@@ -1,23 +1,20 @@
 """
-Script para crear un usuario Administrador en Luz & Memoria.
+Crear un usuario administrador en Luz & Memoria.
 
-Utiliza la conexión MySQL configurada en run_local.py.
-No elimina ni modifica usuarios existentes.
+Utiliza Supabase PostgreSQL y el mismo sistema de
+contraseñas que la autenticación de FastAPI.
+
+No modifica ni elimina usuarios existentes.
 """
 
 import getpass
+import re
 
-from sqlalchemy import MetaData
+from sqlalchemy import MetaData, Table, insert, select, func
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.core.security import hash_password
-from app.domain.models import build_users_table
-from app.infrastructure.database import database
-
-from run_local import (
-    ensure_laragon_mysql_running,
-    initialize_mysql_databases,
-)
+from app.infrastructure.database import supabase_database
 
 
 def main():
@@ -25,28 +22,21 @@ def main():
     print("   LUZ & MEMORIA - CREAR ADMINISTRADOR")
     print("========================================\n")
 
-    # 1. Verificar que MySQL esté disponible.
-    try:
-        ensure_laragon_mysql_running()
-
-        # Obtiene la conexión a fotografia_clientes.
-        # Reutiliza la configuración de run_local.py.
-        clients_url, _ = initialize_mysql_databases()
-
-    except Exception as error:
-        print(f"\nERROR al conectar con MySQL: {error}")
-        return
-
-    # 2. Solicitar correo electrónico.
     email = input(
-        "\nCorreo electrónico del administrador: "
+        "Correo electrónico del administrador: "
     ).strip().lower()
 
-    if not email or "@" not in email:
+    if not re.fullmatch(
+        r"[^\s@]+@[^\s@]+\.[^\s@]+",
+        email,
+    ):
         print("\nERROR: Introduce un correo válido.")
         return
 
-    # 3. Solicitar contraseña sin mostrarla.
+    if len(email) > 160:
+        print("\nERROR: El correo es demasiado largo.")
+        return
+
     password = getpass.getpass(
         "Contraseña del administrador: "
     )
@@ -66,44 +56,50 @@ def main():
         print("\nERROR: Las contraseñas no coinciden.")
         return
 
-    # 4. Conectar con la base de datos de clientes.
-    engine = database(clients_url)
-
-    metadata = MetaData()
-    users_table = build_users_table(metadata)
+    engine = None
 
     try:
-        # 5. Verificar si el correo ya está registrado.
-        with engine.connect() as connection:
-            existing_user = connection.execute(
-                users_table.select().where(
-                    users_table.c.email == email
+        engine = supabase_database()
+
+        metadata = MetaData()
+
+        usuarios = Table(
+            "usuarios",
+            metadata,
+            schema="public",
+            autoload_with=engine,
+        )
+
+        with engine.begin() as conexion:
+            existente = conexion.execute(
+                select(usuarios.c.id_usuario).where(
+                    func.lower(usuarios.c.correo) == email
                 )
-            ).mappings().first()
+            ).first()
 
-        if existing_user:
-            print(
-                "\nERROR: Ya existe un usuario "
-                "registrado con ese correo."
-            )
-            return
-
-        # 6. Generar el hash seguro de la contraseña.
-        password_hash = hash_password(password)
-
-        # 7. Crear la cuenta de Administrador.
-        with engine.begin() as connection:
-            result = connection.execute(
-                users_table.insert().values(
-                    client_id=None,
-                    email=email,
-                    password_hash=password_hash,
-                    role="Administrador",
-                    is_active=1,
+            if existente:
+                print(
+                    "\nERROR: Ya existe un usuario "
+                    "registrado con ese correo."
                 )
+                return
+
+            password_hash = hash_password(password)
+
+            resultado = conexion.execute(
+                insert(usuarios)
+                .values(
+                    id_cliente=None,
+                    correo=email,
+                    contrasena_hash=password_hash,
+                    rol="Administrador",
+                    activo=True,
+                    registro_pendiente=False,
+                )
+                .returning(usuarios.c.id_usuario)
             )
 
-            admin_id = result.inserted_primary_key[0]
+            admin_id = resultado.scalar_one()
 
         print("\n========================================")
         print("   ADMINISTRADOR CREADO CORRECTAMENTE")
@@ -124,7 +120,8 @@ def main():
         print(f"\nERROR de base de datos: {error}")
 
     finally:
-        engine.dispose()
+        if engine is not None:
+            engine.dispose()
 
 
 if __name__ == "__main__":

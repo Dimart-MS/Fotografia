@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// ==============================|| VITE CONFIG - ESTUDIO FOTOGRÁFICO ||============================== //
+// ==============================|| VITE CONFIG - LUZ & MEMORIA ||============================== //
 
 export default defineConfig({
   plugins: [react()],
@@ -9,9 +9,10 @@ export default defineConfig({
     port: 5175,
     strictPort: true,
     proxy: {
-      '/api/auth': 'http://127.0.0.1:8011',
-      '/api/clientes': 'http://127.0.0.1:8011',
-      '/api': 'http://127.0.0.1:8012'
+      '/api': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true
+      }
     }
   }
 });

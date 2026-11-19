@@ -1,39 +1,44 @@
+
 import { studioRequest } from './httpClient';
 
-// ==============================|| API DE CLIENTES (HU 06) ||============================== //
-
-/**
- * Obtiene el listado completo de clientes registrados en el estudio.
- * @param {string} accessKey - Clave Bearer del estudio
- */
-export async function fetchClientes(accessKey) {
-  return studioRequest('/api/clientes', { method: 'GET' }, accessKey);
+export async function fetchClientes(token) {
+  return studioRequest('/api/clientes', { method: 'GET' }, token);
 }
 
-/**
- * Registra un nuevo cliente en el directorio del estudio.
- * @param {object} clientData - Datos del cliente (name, email, phone, address)
- * @param {string} accessKey - Clave Bearer del estudio
- */
-export async function createCliente(clientData, accessKey) {
+export async function createCliente(clientData, token) {
   return studioRequest(
     '/api/clientes',
     {
       method: 'POST',
       body: JSON.stringify(clientData)
     },
-    accessKey
+    token
   );
 }
 
-
 export async function updateCliente(clientId, customerData, token) {
-    return studioRequest(
-        `/api/clientes/${clientId}`,
-        {
-            method: 'PUT',
-            body: JSON.stringify(customerData)
-        },
-        token
-    );
+  return studioRequest(
+    `/api/clientes/${clientId}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(customerData)
+    },
+    token
+  );
+}
+
+export async function inactivarCliente(clientId, token) {
+  return studioRequest(
+    `/api/clientes/${clientId}/inactivar`,
+    { method: 'PATCH' },
+    token
+  );
+}
+
+export async function reactivarCliente(clientId, token) {
+  return studioRequest(
+    `/api/clientes/${clientId}/reactivar`,
+    { method: 'PATCH' },
+    token
+  );
 }

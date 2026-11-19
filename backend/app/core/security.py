@@ -14,7 +14,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt import InvalidTokenError
-
+from app.core.config import settings
 import jwt
 
 
@@ -65,7 +65,7 @@ def verify_password(password: str, stored_hash: str) -> bool:
 
 def get_jwt_secret() -> str:
     """Obtiene la clave secreta utilizada para firmar tokens."""
-    secret = os.environ.get("JWT_SECRET_KEY", "")
+    secret = settings.JWT_SECRET_KEY
 
     if len(secret) < 32:
         raise RuntimeError(
@@ -134,7 +134,11 @@ def require_user(repository):
                 detail="Token inválido o expirado",
             )
         user = repository.get_by_id(user_id)
-        if not user or not user["is_active"]:
+        if (
+            not user
+            or not user["is_active"]
+            or user.get("registro_pendiente", False)
+        ):
             raise HTTPException(
                 status_code=401,
                 detail="Usuario inactivo o inexistente",

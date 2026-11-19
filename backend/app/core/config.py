@@ -5,10 +5,15 @@ Basado en la estructura modular de MicroserviciosSitic (app/core/config.py).
 import os
 import secrets
 from datetime import date, datetime
+from pathlib import Path
 from zoneinfo import ZoneInfo
+from dotenv import load_dotenv
 
 from fastapi import Header, HTTPException
 
+# Cargar las variables desde backend/.env
+ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
+load_dotenv(dotenv_path=ENV_PATH)
 
 class Settings:
     """Parámetros de configuración del sistema de gestión para estudio fotográfico."""
@@ -16,6 +21,23 @@ class Settings:
     PROJECT_NAME: str = "Luz & Memoria - Sistema Integral de Gestión para Fotografía"
     VERSION: str = "1.0.0"
     TIMEZONE: str = "America/Mexico_City"
+        # Base de datos unificada PostgreSQL - Supabase
+    DATABASE_URL: str = os.environ.get("DATABASE_URL", "")
+
+    # Configuracion de Supabase Storage
+    SUPABASE_URL: str = os.environ.get("SUPABASE_URL", "")
+    SUPABASE_SERVICE_ROLE_KEY: str = os.environ.get(
+        "SUPABASE_SERVICE_ROLE_KEY", ""
+    )
+    SUPABASE_BUCKET_COMPROBANTES: str = os.environ.get(
+        "SUPABASE_BUCKET_COMPROBANTES", "comprobantes-pago"
+    )
+    SUPABASE_BUCKET_FOTOGRAFIAS: str = os.environ.get(
+        "SUPABASE_BUCKET_FOTOGRAFIAS", "fotografias-eventos"
+    )
+
+    # Autenticacion
+    JWT_SECRET_KEY: str = os.environ.get("JWT_SECRET_KEY", "")
 
     CLIENTS_DATABASE_URL: str = os.environ.get(
         "CLIENTS_DATABASE_URL",

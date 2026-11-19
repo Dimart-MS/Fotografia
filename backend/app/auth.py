@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.exc import IntegrityError
+from jwt import InvalidTokenError
 
 from app.core.security import (
     create_access_token,
@@ -10,7 +11,7 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
-from app.domain.schemas import (
+from app.schemas.auth import (
     TokenResponse,
     UserLoginInput,
     UserRegisterInput,
@@ -34,7 +35,7 @@ def create_auth_router(repository):
         try:
             payload = decode_access_token(credentials.credentials)
             user_id = int(payload["sub"])
-        except (ValueError, KeyError, TypeError, Exception):
+        except (InvalidTokenError, ValueError, KeyError, TypeError):
             raise HTTPException(
                 status_code=401,
                 detail="Token inválido o expirado",
@@ -42,7 +43,11 @@ def create_auth_router(repository):
 
         user = repository.get_by_id(user_id)
 
-        if not user or not user["is_active"]:
+        if (
+            not user
+            or not user["is_active"]
+            or user.get("registro_pendiente", False)
+        ):
             raise HTTPException(
                 status_code=401,
                 detail="Usuario inactivo o inexistente",
@@ -86,6 +91,8 @@ def create_auth_router(repository):
         if (
             not user
             or not user["is_active"]
+            or user.get("registro_pendiente", False)
+            or not user.get("password_hash")
             or not verify_password(
                 body.password,
                 user["password_hash"],
