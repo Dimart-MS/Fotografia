@@ -46,8 +46,9 @@ Sustituye el ejemplo por la URL real del **backend**, no por la URL del panel/pr
 
 | Historia | Funciones |
 |---|---|
-| Como administrador, quiero gestionar clientes para asociarlos a una contratación. | Acceso, búsqueda, registro y detalle de clientes; domicilio dividido en campos, selector integrado de lugares con confirmación/ajuste manual y consulta o ruta externa en Maps. |
-| Como administrador, quiero gestionar reservas para organizar los eventos. | Agenda mensual, filtros, detalle, alta, registro de anticipo y cancelación de solicitudes pendientes sin pagos. |
+| Como administrador, quiero gestionar clientes para asociarlos a una contratación (`HU-06`). | Acceso, búsqueda, indicadores, registro, **edición de datos/domicilio**, **inactivación/reactivación** y detalle de clientes; domicilio dividido en campos, selector integrado de lugares con confirmación/ajuste manual y consulta o ruta externa en Maps. |
+| Como administrador, quiero gestionar paquetes y coberturas (`HU-07` / Req. 10). | Catálogo administrativo de paquetes (`GET /api/paquetes/administracion`), plantillas rápidas P2–P5, alta (`POST /api/paquetes`), edición (`PATCH /api/paquetes/{clave}`) e inactivación/reactivación. |
+| Como administrador, quiero gestionar reservas, pagos, entregas y ruta GPS (`HU-04`, `HU-05`, `HU-08`). | Agenda mensual, filtros, detalle con **ruta GPS directa al domicilio del cliente**, alta, aprobación/rechazo de comprobante y anticipo, liquidación de saldo y panel de entrega digital/galería. |
 
 Incluye inicio con métricas y próximos eventos. Contempla los estados actuales de reservas, fechas ocupadas y tipo de evento Otro. El servidor valida disponibilidad, importes y permisos. El anticipo se registra como efectivo según el contrato actual del backend: solo debe confirmarse dinero realmente recibido.
 

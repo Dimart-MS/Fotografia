@@ -9,11 +9,19 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 
+data class DeliveryTracking(
+    val stageOverride: String? = null,
+    val galleryUrl: String = "",
+    val photosCount: Int = 0,
+    val rejectionReason: String = ""
+)
+
 data class StudioState(
     val user: StudioUser? = null, val loading: Boolean = false,
     val writing: Boolean = false, val error: String? = null,
     val notice: String? = null, val clients: List<Client> = emptyList(),
     val packages: List<PackageOption> = emptyList(), val bookings: List<Booking> = emptyList(),
+    val deliveries: Map<Long, DeliveryTracking> = emptyMap(),
     val loaded: Boolean = false, val uncertainWrite: Boolean = false
 )
 
@@ -53,10 +61,15 @@ class StudioViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 val clients = repository.clients()
-                val packages = repository.packages()
+                val packages = repository.adminPackages()
                 val bookings = repository.bookings()
                 if (epoch == currentEpoch) mutableState.update {
-                    it.copy(clients = clients, packages = packages, bookings = bookings,
+                    val overrides = it.deliveries
+                    val mergedBookings = bookings.map { b ->
+                        val localStage = overrides[b.id]?.stageOverride
+                        if (localStage != null && b.status == Rules.CONFIRMED) b.copy(status = localStage) else b
+                    }
+                    it.copy(clients = clients, packages = packages, bookings = mergedBookings,
                         loaded = true, loading = false, uncertainWrite = false)
                 }
             } catch (error: Exception) { if (epoch == currentEpoch) { fail(error); mutableState.update { it.copy(loading = false) } } }
@@ -87,6 +100,62 @@ class StudioViewModel : ViewModel() {
         val error = Rules.clientError(body)
         if (error != null) { mutableState.update { it.copy(error = error) }; return }
         write({ repository.createClient(body) }, "Cliente registrado", completed)
+    }
+    fun updateClient(id: Long, body: ClientRequest, completed: () -> Unit) {
+        val error = Rules.clientError(body)
+        if (error != null) { mutableState.update { it.copy(error = error) }; return }
+        write({ repository.updateClient(id, body) }, "Datos del cliente actualizados", completed)
+    }
+    fun setClientActive(id: Long, active: Boolean, completed: () -> Unit = {}) {
+        val msg = if (active) "Cliente reactivado" else "Cliente inactivado"
+        write({ repository.setClientActive(id, active) }, msg, completed)
+    }
+    fun createPackage(body: PackageCreateRequest, completed: () -> Unit) {
+        write({ repository.createPackage(body) }, "Paquete creado", completed)
+    }
+    fun updatePackage(clave: String, body: PackageUpdateRequest, completed: () -> Unit) {
+        write({ repository.updatePackage(clave, body) }, "Paquete actualizado", completed)
+    }
+    fun setPackageActive(clave: String, active: Boolean) {
+        val msg = if (active) "Paquete reactivado" else "Paquete inactivado"
+        write({ repository.setPackageActive(clave, active) }, msg, {})
+    }
+    fun saveDeliveryProgress(bookingId: Long, stage: String?, galleryUrl: String, photosCount: Int) {
+        mutableState.update { current ->
+            val prev = current.deliveries[bookingId] ?: DeliveryTracking()
+            val updated = prev.copy(
+                stageOverride = stage ?: prev.stageOverride,
+                galleryUrl = galleryUrl.trim(),
+                photosCount = photosCount
+            )
+            val updatedBookings = current.bookings.map { b ->
+                if (b.id == bookingId && updated.stageOverride != null) b.copy(status = updated.stageOverride) else b
+            }
+            current.copy(
+                deliveries = current.deliveries + (bookingId to updated),
+                bookings = updatedBookings,
+                notice = if (stage == Rules.DELIVERED) "Entrega y galería registradas" else "Progreso de cobertura actualizado"
+            )
+        }
+    }
+    fun rejectReceipt(bookingId: Long, reason: String) {
+        val cleanReason = reason.trim()
+        if (cleanReason.length < 4) {
+            mutableState.update { it.copy(error = "Indica el motivo del rechazo para orientar al cliente.") }
+            return
+        }
+        mutableState.update { current ->
+            val prev = current.deliveries[bookingId] ?: DeliveryTracking()
+            val updated = prev.copy(rejectionReason = cleanReason, stageOverride = Rules.PENDING)
+            val updatedBookings = current.bookings.map { b ->
+                if (b.id == bookingId) b.copy(status = Rules.PENDING) else b
+            }
+            current.copy(
+                deliveries = current.deliveries + (bookingId to updated),
+                bookings = updatedBookings,
+                notice = "Comprobante rechazado con motivo registrado"
+            )
+        }
     }
     fun createBooking(body: BookingRequest, completed: () -> Unit) =
         write({ repository.createBooking(body) }, "Solicitud registrada", completed)

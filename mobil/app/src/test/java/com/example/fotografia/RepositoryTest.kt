@@ -81,4 +81,49 @@ class RepositoryTest {
             assertEquals("El anticipo debe estar entre el mínimo requerido y el total.", errorMessage(error, true))
         }
     }
+
+    @Test fun clientUpdateAndStatusToggleUseCorrectEndpoints() = runTest {
+        clients.enqueue(json("""{"id":4,"name":"Ana Editada","email":"ana@example.com","phone":"4771234567","address":"Madero 20, Centro, León, C.P. 37000","active":true}"""))
+        val updated = repository.updateClient(4, ClientRequest("Ana Editada", "4771234567", "ana@example.com", "Madero 20, Centro, León, C.P. 37000"))
+        assertEquals("Ana Editada", updated.name)
+        val patchReq = clients.takeRequest(2, TimeUnit.SECONDS)!!
+        assertEquals("PATCH", patchReq.method)
+        assertEquals("/api/clientes/4", patchReq.path)
+
+        clients.enqueue(json("""{"message":"Cliente inactivado correctamente","id":4,"active":false}"""))
+        assertFalse(repository.setClientActive(4, false).active)
+        assertEquals("/api/clientes/4/inactivar", clients.takeRequest(2, TimeUnit.SECONDS)!!.path)
+
+        clients.enqueue(json("""{"message":"Cliente reactivado correctamente","id":4,"active":true}"""))
+        assertTrue(repository.setClientActive(4, true).active)
+        assertEquals("/api/clientes/4/reactivar", clients.takeRequest(2, TimeUnit.SECONDS)!!.path)
+    }
+
+    @Test fun packageCrudUsesAdminRoutesAndValidatesRules() = runTest {
+        assertNull(Rules.packageError("paquete-2", "Paquete 2", "100 fotos 5x7", "6500.00", isNew = true))
+        assertNotNull(Rules.packageError("Clave Invalida!", "Paquete 2", "", "6500.00", isNew = true))
+        assertNotNull(Rules.packageError("paquete-2", "P2", "", "6500.00", isNew = true))
+        assertNotNull(Rules.packageError("paquete-2", "Paquete 2", "", "0", isNew = true))
+
+        bookings.enqueue(json("""[{"id":"paquete-2","name":"Paquete 2","description":"Pre-sesión y 100 fotos","price_cents":650000,"active":true}]"""))
+        val list = repository.adminPackages()
+        assertEquals("paquete-2", list.single().id)
+        assertEquals("/api/paquetes/administracion", bookings.takeRequest(2, TimeUnit.SECONDS)!!.path)
+
+        bookings.enqueue(json("""{"id":"paquete-3","name":"Paquete 3","description":"110 fotos","price_cents":1000000,"active":true}""", 201))
+        val created = repository.createPackage(PackageCreateRequest("paquete-3", "Paquete 3", "110 fotos", 1000000))
+        assertEquals(1000000L, created.price_cents)
+        val createReq = bookings.takeRequest(2, TimeUnit.SECONDS)!!
+        assertEquals("POST", createReq.method)
+        assertEquals("/api/paquetes", createReq.path)
+
+        bookings.enqueue(json("""{"id":"paquete-3","name":"Paquete 3 Plus","description":"120 fotos","price_cents":1050000,"active":true}"""))
+        val edited = repository.updatePackage("paquete-3", PackageUpdateRequest("Paquete 3 Plus", "120 fotos", 1050000))
+        assertEquals("Paquete 3 Plus", edited.name)
+        assertEquals("/api/paquetes/paquete-3", bookings.takeRequest(2, TimeUnit.SECONDS)!!.path)
+
+        bookings.enqueue(json("""{"message":"Paquete inactivado correctamente","active":false}"""))
+        assertFalse(repository.setPackageActive("paquete-3", false).active)
+        assertEquals("/api/paquetes/paquete-3/inactivar", bookings.takeRequest(2, TimeUnit.SECONDS)!!.path)
+    }
 }

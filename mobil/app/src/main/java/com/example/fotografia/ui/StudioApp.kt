@@ -19,6 +19,7 @@ import com.example.fotografia.ui.auth.LoginScreen
 import com.example.fotografia.ui.bookings.*
 import com.example.fotografia.ui.clients.*
 import com.example.fotografia.ui.home.HomeScreen
+import com.example.fotografia.ui.packages.PackagesScreen
 
 @Composable
 fun StudioApp(model: StudioViewModel = viewModel()) {
@@ -35,7 +36,7 @@ private fun StudioContent(state: StudioState, model: StudioViewModel) {
     val route = entry?.destination?.route ?: "home"
     val snack = remember { SnackbarHostState() }
     var leaving by remember { mutableStateOf(false) }
-    val roots = listOf("home", "clients", "bookings")
+    val roots = listOf("home", "clients", "bookings", "packages")
     LaunchedEffect(state.notice) { state.notice?.let { snack.showSnackbar(it); model.dismissNotice() } }
     BackHandler(enabled = state.writing) { }
     Scaffold(snackbarHost = { SnackbarHost(snack) }, topBar = {
@@ -47,9 +48,26 @@ private fun StudioContent(state: StudioState, model: StudioViewModel) {
         })
     }, bottomBar = {
         NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
-            listOf(Triple("home", "Inicio", Icons.Outlined.Home), Triple("clients", "Clientes", Icons.Outlined.People), Triple("bookings", "Agenda", Icons.Outlined.CalendarMonth)).forEach { (target, label, icon) ->
-                NavigationBarItem(colors = NavigationBarItemDefaults.colors(indicatorColor = MaterialTheme.colorScheme.primaryContainer, selectedIconColor = MaterialTheme.colorScheme.primary, selectedTextColor = MaterialTheme.colorScheme.primary), selected = route == target || (target == "clients" && route.startsWith("client/")) || (target == "bookings" && route.startsWith("booking/")), enabled = !state.writing,
-                    onClick = { nav.navigate(target) { popUpTo("home"); launchSingleTop = true } }, icon = { Icon(icon, null) }, label = { Text(label) })
+            listOf(
+                Triple("home", "Inicio", Icons.Outlined.Home),
+                Triple("clients", "Clientes", Icons.Outlined.People),
+                Triple("bookings", "Agenda", Icons.Outlined.CalendarMonth),
+                Triple("packages", "Paquetes", Icons.Outlined.Inventory2)
+            ).forEach { (target, label, icon) ->
+                NavigationBarItem(
+                    colors = NavigationBarItemDefaults.colors(
+                        indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                        selectedIconColor = MaterialTheme.colorScheme.primary,
+                        selectedTextColor = MaterialTheme.colorScheme.primary
+                    ),
+                    selected = route == target ||
+                        (target == "clients" && route.startsWith("client/")) ||
+                        (target == "bookings" && route.startsWith("booking/")),
+                    enabled = !state.writing,
+                    onClick = { nav.navigate(target) { popUpTo("home"); launchSingleTop = true } },
+                    icon = { Icon(icon, null) },
+                    label = { Text(label, maxLines = 1) }
+                )
             }
         }
     }) { padding ->
@@ -61,14 +79,44 @@ private fun StudioContent(state: StudioState, model: StudioViewModel) {
                 composable("clients") { ClientList(state, { nav.navigate("client/new") }, { nav.navigate("client/$it") }) }
                 composable("client/new") { ClientForm(state) { body -> model.createClient(body) { nav.popBackStack() } } }
                 composable("client/{id}", listOf(navArgument("id") { type = NavType.LongType })) { back ->
-                    ClientDetail(back.arguments!!.getLong("id"), state, { nav.navigate("booking/new?clientId=$it") }, { nav.navigate("booking/$it") })
+                    val clientId = back.arguments!!.getLong("id")
+                    ClientDetail(
+                        id = clientId,
+                        state = state,
+                        reserve = { nav.navigate("booking/new?clientId=$it") },
+                        edit = { nav.navigate("client/$it/edit") },
+                        toggleActive = { id, active -> model.setClientActive(id, active) },
+                        detail = { nav.navigate("booking/$it") }
+                    )
+                }
+                composable("client/{id}/edit", listOf(navArgument("id") { type = NavType.LongType })) { back ->
+                    val clientId = back.arguments!!.getLong("id")
+                    val current = state.clients.find { it.id == clientId }
+                    ClientForm(state, initialClient = current) { body ->
+                        model.updateClient(clientId, body) { nav.popBackStack() }
+                    }
                 }
                 composable("bookings") { AgendaScreen(state, { nav.navigate("booking/new?date=$it") }, { nav.navigate("booking/$it") }) }
                 composable("booking/new?clientId={clientId}&date={date}", listOf(navArgument("clientId") { type = NavType.LongType; defaultValue = 0L }, navArgument("date") { defaultValue = "" })) { back ->
                     BookingForm(state, back.arguments!!.getLong("clientId"), back.arguments!!.getString("date").orEmpty()) { body -> model.createBooking(body) { nav.popBackStack() } }
                 }
                 composable("booking/{id}", listOf(navArgument("id") { type = NavType.LongType })) { back ->
-                    BookingDetail(back.arguments!!.getLong("id"), state, model::confirm, model::cancel)
+                    BookingDetail(
+                        id = back.arguments!!.getLong("id"),
+                        state = state,
+                        confirm = model::confirm,
+                        cancel = model::cancel,
+                        onSaveDelivery = model::saveDeliveryProgress,
+                        onRejectReceipt = model::rejectReceipt
+                    )
+                }
+                composable("packages") {
+                    PackagesScreen(
+                        state = state,
+                        onCreate = model::createPackage,
+                        onUpdate = model::updatePackage,
+                        onToggleActive = model::setPackageActive
+                    )
                 }
             }
         }

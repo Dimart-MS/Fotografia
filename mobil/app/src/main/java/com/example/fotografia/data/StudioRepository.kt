@@ -18,9 +18,17 @@ interface ClientsApi {
     @GET("api/auth/me") suspend fun me(): StudioUser
     @GET("api/clientes") suspend fun clients(): List<Client>
     @POST("api/clientes") suspend fun createClient(@Body body: ClientRequest): Client
+    @PATCH("api/clientes/{id}") suspend fun updateClient(@Path("id") id: Long, @Body body: ClientRequest): Client
+    @PATCH("api/clientes/{id}/inactivar") suspend fun deactivateClient(@Path("id") id: Long): StatusChange
+    @PATCH("api/clientes/{id}/reactivar") suspend fun reactivateClient(@Path("id") id: Long): StatusChange
 }
 interface BookingsApi {
     @GET("api/paquetes") suspend fun packages(): List<PackageOption>
+    @GET("api/paquetes/administracion") suspend fun adminPackages(): List<PackageOption>
+    @POST("api/paquetes") suspend fun createPackage(@Body body: PackageCreateRequest): PackageOption
+    @PATCH("api/paquetes/{clave}") suspend fun updatePackage(@Path("clave") clave: String, @Body body: PackageUpdateRequest): PackageOption
+    @PATCH("api/paquetes/{clave}/inactivar") suspend fun deactivatePackage(@Path("clave") clave: String): StatusChange
+    @PATCH("api/paquetes/{clave}/reactivar") suspend fun reactivatePackage(@Path("clave") clave: String): StatusChange
     @GET("api/reservas") suspend fun bookings(): List<Booking>
     @POST("api/reservas") suspend fun createBooking(@Body body: BookingRequest): Booking
     @POST("api/reservas/{id}/confirmar") suspend fun confirm(@Path("id") id: Long, @Body body: PaymentRequest): BookingChange
@@ -78,8 +86,20 @@ class StudioRepository(val session: Session = Session()) {
     }
     suspend fun clients() = clientsApi.clients()
     suspend fun packages() = bookingsApi.packages()
+    suspend fun adminPackages(): List<PackageOption> = try {
+        bookingsApi.adminPackages()
+    } catch (e: HttpException) {
+        if (e.code() == 404) bookingsApi.packages() else throw e
+    }
     suspend fun bookings() = bookingsApi.bookings()
     suspend fun createClient(body: ClientRequest) = clientsApi.createClient(body)
+    suspend fun updateClient(id: Long, body: ClientRequest) = clientsApi.updateClient(id, body)
+    suspend fun setClientActive(id: Long, active: Boolean) =
+        if (active) clientsApi.reactivateClient(id) else clientsApi.deactivateClient(id)
+    suspend fun createPackage(body: PackageCreateRequest) = bookingsApi.createPackage(body)
+    suspend fun updatePackage(clave: String, body: PackageUpdateRequest) = bookingsApi.updatePackage(clave, body)
+    suspend fun setPackageActive(clave: String, active: Boolean) =
+        if (active) bookingsApi.reactivatePackage(clave) else bookingsApi.deactivatePackage(clave)
     suspend fun createBooking(body: BookingRequest) = bookingsApi.createBooking(body)
     suspend fun confirm(id: Long, cents: Long) = bookingsApi.confirm(id, PaymentRequest(Rules.amount(cents)))
     suspend fun cancel(id: Long) = bookingsApi.cancel(id)

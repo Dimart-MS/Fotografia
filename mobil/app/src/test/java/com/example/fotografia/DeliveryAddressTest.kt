@@ -184,4 +184,13 @@ class DeliveryAddressTest {
         assertEquals(original, currentFormAddress)
         assertEquals("Calle Madero 110, Centro, León, Guanajuato, C.P. 37000", currentFormAddress.formatted)
     }
+
+    @Test fun formattedAddressRoundTripsWhenEditingExistingClient() {
+        val parsed = DeliveryAddress.fromFormatted("Av. Universidad Tecnológica 225, San Carlos, León, Guanajuato, México, C.P. 37670")
+        assertEquals("Av. Universidad Tecnológica 225", parsed.street)
+        assertEquals("San Carlos", parsed.neighborhood)
+        assertEquals("León, Guanajuato, México", parsed.cityRegion)
+        assertEquals("37670", parsed.postalCode)
+        assertNull(parsed.error)
+    }
 }

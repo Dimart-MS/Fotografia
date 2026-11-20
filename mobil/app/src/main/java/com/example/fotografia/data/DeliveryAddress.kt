@@ -43,6 +43,29 @@ data class DeliveryAddress(
             else -> null
         }
     }
+
+    companion object {
+        fun fromFormatted(raw: String): DeliveryAddress {
+            val cleanRaw = raw.trim()
+            if (cleanRaw.isEmpty()) return DeliveryAddress()
+            val cpMatch = Regex("(?i)(?:,\\s*)?C\\.?P\\.?\\s*([0-9]{5})\\s*$").find(cleanRaw)
+            val postal = cpMatch?.groupValues?.getOrNull(1).orEmpty()
+            val withoutCp = if (cpMatch != null) cleanRaw.removeRange(cpMatch.range).trim().trimEnd(',') else cleanRaw
+            val parts = withoutCp.split(',').map { it.trim() }.filter { it.isNotBlank() }
+            return when {
+                parts.isEmpty() -> DeliveryAddress(postalCode = postal)
+                parts.size == 1 -> DeliveryAddress(street = parts[0], cityRegion = "León, Guanajuato", postalCode = postal)
+                parts.size == 2 -> DeliveryAddress(street = parts[0], cityRegion = parts[1], postalCode = postal)
+                parts.size == 3 -> DeliveryAddress(street = parts[0], neighborhood = parts[1], cityRegion = parts[2], postalCode = postal)
+                else -> DeliveryAddress(
+                    street = parts.first(),
+                    neighborhood = parts[1],
+                    cityRegion = parts.drop(2).joinToString(", "),
+                    postalCode = postal
+                )
+            }
+        }
+    }
 }
 
 /** Datos temporales de sugerencia de lugar; no se envían ni almacenan en el backend. */

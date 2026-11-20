@@ -135,5 +135,18 @@ Los originales de la plantilla se conservaron en `C:\Users\user\Documents\Proyec
   - `.\gradlew.bat :app:assembleDebug :app:testDebugUnitTest :app:lintDebug` → `BUILD SUCCESSFUL` (20 pruebas unitarias JVM aprobadas, incluyendo autocompletado y detalle de Google Places con `MockWebServer`, resultados sin número/colonia/CP, ajuste manual, cancelación, límite de 250 caracteres y errores 403/sin clave).
   - Instalación y ejecución en dispositivo físico Samsung SM-A035M (`R9HT30BTNVL`) mediante `adb install -r` y `:app:connectedDebugAndroidTest` (pruebas instrumentadas de Compose UI para selección, edición manual de número exterior/interior, cancelación y preservación tras cambio de configuración/rotación, sin guardar clientes de prueba en la base compartida).
 - **Pendientes concretos:**
-  - Configurar una clave real `studioPlacesApiKey` del equipo en `local.properties` para consultar Google Places API (New) en vivo (sin clave, la app informa el requisito y permite el flujo manual completo).
+  - Configurar una clave real `studioPlacesApiKey` del equipo en `local.properties` si se desea usar Google Places API (New) en lugar del proveedor geográfico abierto predeterminado.
   - Verificar el flujo autenticado completo contra el backend unificado en el puerto 8000 conectado a Supabase cuando el servicio esté activo.
+
+### 20 de noviembre de 2026 · Alineación con últimos commits del equipo (`bb77f00`) e Historias Móviles (`HU-04` a `HU-08`)
+
+- **Gestión completa de Clientes (`HU-06`):**
+  - Conectados `PATCH /api/clientes/{id}`, `PATCH /api/clientes/{id}/inactivar` y `PATCH /api/clientes/{id}/reactivar`.
+  - Indicadores de clientes totales/activos/inactivos, edición reutilizando `DeliveryAddress.fromFormatted` y el selector de lugares, y bloqueo de creación de reservas para clientes inactivos.
+- **Módulo Administrativo de Paquetes (`HU-07` / Req. 10):**
+  - Nueva pestaña **Paquetes** en la barra de navegación inferior (`ui/packages/PackageScreens.kt`).
+  - Conectados `GET /api/paquetes/administracion` (con respaldo a `GET /api/paquetes`), `POST /api/paquetes`, `PATCH /api/paquetes/{clave}`, `PATCH /api/paquetes/{clave}/inactivar` y `PATCH /api/paquetes/{clave}/reactivar`.
+  - Incluye plantillas rápidas para **Paquete 2 ($6,500)**, **Paquete 3 ($10,000)**, **Paquete 4 ($13,000)** y **Paquete 5 ($15,000)**.
+- **Seguimiento en Detalle de Reserva (`HU-04`, `HU-05`, `HU-08`):**
+  - Acceso directo a domicilio de entrega y botón **«Cómo llegar»** (ruta GPS en Google Maps) desde el detalle de la reserva (`HU-05`).
+  - Aprobación de comprobante/anticipo, opción de rechazo con motivo (`HU-04`) y panel de entrega digital con selección de fotografías del dispositivo, enlace de video (Drive/YouTube) y avance de estado `Confirmada → Realizada → Entregada` (`HU-08`).
