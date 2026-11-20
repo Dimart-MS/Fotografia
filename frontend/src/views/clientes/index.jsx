@@ -6,6 +6,11 @@ import {
   Box,
   Button,
   Chip,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  IconButton,
   InputAdornment,
   Paper,
   Stack,
@@ -45,6 +50,9 @@ export default function ClientesView() {
   // Alternar entre tarjetas y tabla
   const [viewMode, setViewMode] = useState('cards');
 
+  // Cliente seleccionado para mostrar su perfil
+  const [selectedClient, setSelectedClient] = useState(null);
+
   // Búsqueda
   const normalizedQuery = (search || '').trim().toLowerCase();
 
@@ -61,7 +69,7 @@ export default function ClientesView() {
     return searchableText.includes(normalizedQuery);
   });
 
-  // Indicadores calculados a partir de los datos reales
+  // Indicadores
   const totalClients = clients.length;
 
   const clientsWithEmail = clients.filter(
@@ -72,15 +80,27 @@ export default function ClientesView() {
     (client) => Boolean(client.phone?.trim())
   ).length;
 
-  // Crear reservación para un cliente específico
+  // Crear reservación
   const handleCreateBooking = (client) => {
     openBookingModal(getLocalToday(), client.id);
   };
 
+  // Cambiar tipo de visualización
   const handleViewChange = (_event, newView) => {
     if (newView !== null) {
       setViewMode(newView);
     }
+  };
+
+  // Cerrar perfil
+  const closeDetails = () => {
+    setSelectedClient(null);
+  };
+
+  // Crear reservación desde el perfil
+  const handleBooking = (clientId) => {
+    closeDetails();
+    openBookingModal(getLocalToday(), clientId);
   };
 
   return (
@@ -214,9 +234,7 @@ export default function ClientesView() {
               placeholder="Buscar cliente..."
               label="Nombre, correo o teléfono"
               value={search || ''}
-              onChange={(event) =>
-                setSearch(event.target.value)
-              }
+              onChange={(event) => setSearch(event.target.value)}
               sx={{
                 minWidth: { sm: 280 },
                 '& .MuiOutlinedInput-root': {
@@ -231,6 +249,19 @@ export default function ClientesView() {
                 )
               }}
             />
+
+            <Button
+              variant="contained"
+              onClick={openClientModal}
+              sx={{
+                bgcolor: '#68745B',
+                '&:hover': {
+                  bgcolor: '#59634B'
+                }
+              }}
+            >
+              Registrar cliente
+            </Button>
 
             <ToggleButtonGroup
               value={viewMode}
@@ -263,7 +294,9 @@ export default function ClientesView() {
             icon="people"
             iconSize={36}
             title="Sin clientes registrados"
-            description="Todavía no hay clientes registrados. Utiliza el botón Nuevo cliente de la parte superior para comenzar."
+            description="Todavía no hay clientes registrados. Utiliza el botón Registrar cliente para comenzar."
+            actionLabel="Registrar cliente"
+            onAction={openClientModal}
           />
         ) : filteredClients.length === 0 ? (
           <Box sx={{ py: 3 }}>
@@ -330,9 +363,7 @@ export default function ClientesView() {
                       fontWeight: 700
                     }}
                   >
-                    {getClientInitials(
-                      client.name || 'Cliente'
-                    )}
+                    {getClientInitials(client.name || 'Cliente')}
                   </Avatar>
 
                   <Box sx={{ minWidth: 0 }}>
@@ -406,25 +437,33 @@ export default function ClientesView() {
 
                 <Box sx={{ flexGrow: 1 }} />
 
-                <Button
-                  variant="outlined"
-                  fullWidth
-                  onClick={() =>
-                    handleCreateBooking(client)
-                  }
-                  sx={{
-                    color: '#526047',
-                    borderColor: '#AAB8A1',
-                    textTransform: 'none',
-                    py: 1.2,
-                    '&:hover': {
-                      borderColor: '#526047',
-                      bgcolor: '#F1F4EE'
-                    }
-                  }}
-                >
-                  Reservar evento
-                </Button>
+                <Stack spacing={1.5}>
+                  <Button
+                    variant="outlined"
+                    fullWidth
+                    onClick={() => setSelectedClient(client)}
+                    sx={{
+                      color: '#526047',
+                      borderColor: '#AAB8A1'
+                    }}
+                  >
+                    Ver perfil
+                  </Button>
+
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    onClick={() => handleCreateBooking(client)}
+                    sx={{
+                      bgcolor: '#68745B',
+                      '&:hover': {
+                        bgcolor: '#59634B'
+                      }
+                    }}
+                  >
+                    Reservar evento
+                  </Button>
+                </Stack>
               </Paper>
             ))}
           </Box>
@@ -475,9 +514,7 @@ export default function ClientesView() {
                             fontSize: 13
                           }}
                         >
-                          {getClientInitials(
-                            client.name || 'Cliente'
-                          )}
+                          {getClientInitials(client.name || 'Cliente')}
                         </Avatar>
 
                         <Typography
@@ -502,20 +539,38 @@ export default function ClientesView() {
                     </TableCell>
 
                     <TableCell align="right">
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={() =>
-                          handleCreateBooking(client)
-                        }
-                        sx={{
-                          color: '#526047',
-                          borderColor: '#AAB8A1',
-                          whiteSpace: 'nowrap'
-                        }}
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        justifyContent="flex-end"
                       >
-                        Reservar evento
-                      </Button>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => setSelectedClient(client)}
+                          sx={{
+                            color: '#526047',
+                            borderColor: '#AAB8A1'
+                          }}
+                        >
+                          Ver perfil
+                        </Button>
+
+                        <Button
+                          size="small"
+                          variant="contained"
+                          onClick={() => handleCreateBooking(client)}
+                          sx={{
+                            bgcolor: '#68745B',
+                            '&:hover': {
+                              bgcolor: '#59634B'
+                            },
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          Reservar
+                        </Button>
+                      </Stack>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -524,6 +579,202 @@ export default function ClientesView() {
           </TableContainer>
         )}
       </Paper>
+
+      {/* VENTANA DE INFORMACIÓN DEL CLIENTE */}
+      <Dialog
+        open={Boolean(selectedClient)}
+        onClose={closeDetails}
+        fullWidth
+        maxWidth="sm"
+        PaperProps={{
+          sx: {
+            borderRadius: 4,
+            bgcolor: '#FFFFFF'
+          }
+        }}
+      >
+        {selectedClient && (
+          <>
+            <DialogTitle
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontFamily: 'Georgia, serif',
+                color: '#343B32'
+              }}
+            >
+              Perfil del cliente
+
+              <IconButton
+                onClick={closeDetails}
+                aria-label="Cerrar perfil"
+              >
+                <Icon name="x" />
+              </IconButton>
+            </DialogTitle>
+
+            <DialogContent dividers>
+              <Stack spacing={3} sx={{ py: 2 }}>
+                {/* ENCABEZADO DEL PERFIL */}
+                <Stack
+                  direction="row"
+                  spacing={2}
+                  alignItems="center"
+                >
+                  <Box
+                    sx={{
+                      width: 65,
+                      height: 65,
+                      borderRadius: '50%',
+                      bgcolor: '#EEF0E9',
+                      color: '#68745B',
+                      display: 'grid',
+                      placeItems: 'center',
+                      fontSize: 22,
+                      fontWeight: 600
+                    }}
+                  >
+                    {getClientInitials(selectedClient.name || 'Cliente')}
+                  </Box>
+
+                  <Box>
+                    <Typography
+                      variant="h5"
+                      sx={{
+                        fontFamily: 'Georgia, serif',
+                        color: '#343B32'
+                      }}
+                    >
+                      {selectedClient.name || 'Sin nombre'}
+                    </Typography>
+
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                    >
+                      Cliente registrado en Luz & Memoria
+                    </Typography>
+                  </Box>
+                </Stack>
+
+                <Divider />
+
+                {/* DATOS PERSONALES */}
+                <Box>
+                  <Typography
+                    variant="overline"
+                    sx={{
+                      color: '#7B856D',
+                      letterSpacing: 2
+                    }}
+                  >
+                    INFORMACIÓN PERSONAL
+                  </Typography>
+
+                  <Stack spacing={2.5} sx={{ mt: 2 }}>
+                    <ClientDetail
+                      icon="hash"
+                      label="Identificador"
+                      value={selectedClient.id}
+                    />
+
+                    <ClientDetail
+                      icon="user"
+                      label="Nombre completo"
+                      value={selectedClient.name}
+                    />
+
+                    <ClientDetail
+                      icon="mail"
+                      label="Correo electrónico"
+                      value={selectedClient.email}
+                    />
+
+                    <ClientDetail
+                      icon="phone"
+                      label="Teléfono"
+                      value={selectedClient.phone}
+                    />
+
+                    <ClientDetail
+                      icon="map-pin"
+                      label="Dirección"
+                      value={selectedClient.address}
+                    />
+                  </Stack>
+                </Box>
+
+                <Divider />
+
+                <AlertMessage />
+
+                <Button
+                  variant="contained"
+                  fullWidth
+                  onClick={() => handleBooking(selectedClient.id)}
+                  sx={{
+                    bgcolor: '#68745B',
+                    '&:hover': {
+                      bgcolor: '#59634B'
+                    }
+                  }}
+                >
+                  Crear reservación para este cliente
+                </Button>
+              </Stack>
+            </DialogContent>
+          </>
+        )}
+      </Dialog>
+    </Box>
+  );
+}
+
+// ==============================|| COMPONENTES AUXILIARES ||============================== //
+
+function ClientDetail({ icon, label, value }) {
+  return (
+    <Stack direction="row" spacing={1.5} alignItems="center">
+      <Box sx={{ color: '#68745B' }}>
+        <Icon name={icon} />
+      </Box>
+
+      <Box>
+        <Typography
+          variant="caption"
+          color="text.secondary"
+        >
+          {label}
+        </Typography>
+
+        <Typography
+          variant="body2"
+          sx={{
+            color: '#343B32',
+            fontWeight: 500
+          }}
+        >
+          {value || 'No disponible'}
+        </Typography>
+      </Box>
+    </Stack>
+  );
+}
+
+function AlertMessage() {
+  return (
+    <Box
+      sx={{
+        bgcolor: '#F8F6F0',
+        borderRadius: 2,
+        p: 2
+      }}
+    >
+      <Typography variant="body2" color="text.secondary">
+        Esta información corresponde a los datos registrados en el directorio
+        del estudio.
+      </Typography>
     </Box>
   );
 }
