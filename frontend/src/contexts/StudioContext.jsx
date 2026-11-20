@@ -113,6 +113,27 @@ export function StudioProvider({ children }) {
     }
   };
 
+  // Activar una sesión administrativa ya autenticada
+  const activateAdminSession = async (token) => {
+    setError('');
+    setAuthLoading(true);
+    try {
+      // Cargar clientes y reservaciones
+      const success = await refreshStudioData(token);
+      if (!success) {
+        throw new Error(
+          'No se pudieron cargar los datos administrativos.'
+        );
+      }
+      // Guardar el token en el contexto
+      setAccessKey(token);
+      // Abrir el dashboard principal
+      setPage('inicio');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
   const handleLogout = () => {
     setAccessKey('');
     setLoginEmail('');
@@ -160,6 +181,13 @@ export function StudioProvider({ children }) {
     setModal('cancel');
   };
 
+  // Abrir detalles de una reservación sin modificarla
+  const openBookingDetailsModal = (booking) => {
+    dispatch(setSelectedBooking(booking));
+    setError('');
+    setModal('bookingDetails');
+  };
+
   const closeModal = () => {
     if (!saving) {
       setModal(null);
@@ -183,7 +211,7 @@ export function StudioProvider({ children }) {
           confirmBookingDeposit(selectedBooking.id, paymentAmount, accessKey)
         );
         setToast('Anticipo registrado y fecha confirmada.');
-      } else if (selectedBooking) {
+      } else if (modal === 'cancel' && selectedBooking) {
         await dispatch(cancelPendingBooking(selectedBooking.id, accessKey));
         setToast('Solicitud cancelada.');
       }
@@ -228,11 +256,13 @@ export function StudioProvider({ children }) {
     setCalendarMonth,
     refreshStudioData,
     handleLogin,
+    activateAdminSession,
     handleLogout,
     openClientModal,
     openBookingModal,
     openConfirmPaymentModal,
     openCancelBookingModal,
+    openBookingDetailsModal,
     closeModal,
     handleSaveModal
   };

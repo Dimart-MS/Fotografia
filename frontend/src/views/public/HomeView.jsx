@@ -14,7 +14,7 @@ import Icon from '../../ui-component/Icon';
 import { fetchPaquetes } from '../../api/reservasService';
 
 export default function HomeView({
-    onAdminAccess,
+    onLogin,
     onAvailability,
     onRegister,
     onCustomerLogin
@@ -100,16 +100,23 @@ export default function HomeView({
                         Disponibilidad
                     </Button>
 
-                    <Button color="inherit" onClick={onCustomerLogin}>
-                        Mi cuenta
-                    </Button>
-
                     <Button
-                        variant="outlined"
-                        onClick={onAdminAccess}
-                        sx={{ borderColor: '#68745B', color: '#526047' }}
+                        variant="contained"
+                        onClick={onLogin}
+                        sx={{
+                            bgcolor: '#68745B',
+                            color: '#FFFFFF',
+                            borderRadius: '8px',
+                            px: 3,
+                            py: 1,
+                            textTransform: 'none',
+                            fontWeight: 600,
+                            '&:hover': {
+                                bgcolor: '#526047'
+                            }
+                        }}
                     >
-                        Acceso administrativo
+                        Iniciar sesión
                     </Button>
                 </Stack>
             </Box>
@@ -344,13 +351,47 @@ export default function HomeView({
                     Estamos en León, Guanajuato.
                 </Typography>
 
-                <Button
-                    variant="outlined"
-                    onClick={onAdminAccess}
-                    sx={{ color: '#68745B', borderColor: '#68745B' }}
+                <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={2}
+                    justifyContent="center"
+                    alignItems="center"
                 >
-                    Acceso del personal
-                </Button>
+                    <Button
+                        variant="contained"
+                        onClick={onLogin}
+                        sx={{
+                            bgcolor: '#68745B',
+                            color: '#FFFFFF',
+                            px: 4,
+                            py: 1.2,
+                            textTransform: 'none',
+                            '&:hover': {
+                                bgcolor: '#526047'
+                            }
+                        }}
+                    >
+                        Iniciar sesión
+                    </Button>
+
+                    <Button
+                        variant="outlined"
+                        onClick={onRegister}
+                        sx={{
+                            color: '#68745B',
+                            borderColor: '#68745B',
+                            px: 4,
+                            py: 1.2,
+                            textTransform: 'none',
+                            '&:hover': {
+                                borderColor: '#526047',
+                                bgcolor: '#E9EDE4'
+                            }
+                        }}
+                    >
+                        Crear cuenta
+                    </Button>
+                </Stack>
 
                 <Typography
                     variant="caption"

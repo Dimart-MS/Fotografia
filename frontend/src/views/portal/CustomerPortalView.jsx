@@ -1,949 +1,479 @@
 import { useEffect, useMemo, useState } from 'react';
-
 import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Chip,
-  Container,
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  Divider,
-  IconButton,
-  LinearProgress,
-  Stack,
-  TextField,
-  Typography
+  Alert, Avatar, Box, Button, Card, CardContent, Chip, CircularProgress,
+  Dialog, DialogActions, DialogContent, DialogTitle, Divider, Drawer,
+  IconButton, LinearProgress, Paper, Stack, TextField, Typography, useMediaQuery
 } from '@mui/material';
-
 import Icon from '../../ui-component/Icon';
+import LogoutConfirmDialog from '../../ui-component/LogoutConfirmDialog';
 import { studioRequest } from '../../api/httpClient';
 import { fetchReservas } from '../../api/reservasService';
 import { updateCliente } from '../../api/clientesService';
 
-const sections = [
-  { id: 'reservas', label: 'Mis reservaciones', icon: 'calendar' },
-  { id: 'pagos', label: 'Mis pagos' },
-  { id: 'galeria', label: 'Mi galería', icon: 'image' },
-  { id: 'perfil', label: 'Mis datos' }
+// ==============================|| PORTAL DEL CLIENTE ||============================== //
+
+const SECTIONS = [
+  { id: 'reservas', label: 'Mis reservaciones', icon: 'calendar', description: 'Consulta las fechas y detalles de tus eventos.' },
+  { id: 'pagos', label: 'Mis pagos', icon: 'wallet', description: 'Revisa los importes y saldos de tus reservaciones.' },
+  { id: 'galeria', label: 'Mi galería', icon: 'image', description: 'Tus recuerdos estarán disponibles aquí cuando el estudio los publique.' },
+  { id: 'perfil', label: 'Mis datos', icon: 'people', description: 'Consulta y actualiza tu información de contacto.' }
 ];
 
-const packageNames = {
-  foto: 'Fotografía',
-  video: 'Video',
-  combinado: 'Fotografía y video'
-};
-
-const statusColors = {
-  confirmada: 'success',
-  pendiente: 'warning',
-  cancelada: 'error',
-  entregada: 'info'
+const PACKAGE_NAMES = {
+  foto: 'Fotografía', video: 'Video', combinado: 'Fotografía y video'
 };
 
 const formatPrice = (cents = 0) =>
-  new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN'
-  }).format(Number(cents || 0) / 100);
+  new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' })
+    .format((Number(cents) || 0) / 100);
 
-const formatDate = (value) => {
+function formatDate(value) {
   if (!value) return 'Fecha no disponible';
-
-  const datePart = String(value).split('T')[0];
-  const [year, month, day] = datePart.split('-').map(Number);
-
+  const [year, month, day] = String(value).split('T')[0].split('-').map(Number);
   if (!year || !month || !day) return 'Fecha no disponible';
-
   return new Intl.DateTimeFormat('es-MX', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
+    day: 'numeric', month: 'long', year: 'numeric'
   }).format(new Date(year, month - 1, day));
-};
+}
 
-const getStatusColor = (status) =>
-  statusColors[String(status || '').toLowerCase()] || 'default';
+const moneyValue = (value) => Math.max(Number(value) || 0, 0);
+const isCancelled = (reservation) =>
+  String(reservation.status || '').toLowerCase() === 'cancelada';
+
+function ReservationStatus({ status }) {
+  const normalized = String(status || '').toLowerCase();
+  const palette = normalized === 'confirmada'
+    ? { bg: '#E8F0E2', color: '#3B5C30' }
+    : normalized === 'cancelada'
+      ? { bg: '#F3E8E7', color: '#A34D4D' }
+      : normalized === 'entregada'
+        ? { bg: '#E8EFF4', color: '#456A85' }
+        : { bg: '#F5EDE0', color: '#8A6536' };
+  return <Chip size="small" label={status || 'Sin estado'} sx={{ bgcolor: palette.bg, color: palette.color, fontWeight: 700 }} />;
+}
+
+function EmptySection({ icon, title, description }) {
+  return (
+    <Box sx={{ py: 6, px: 2, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <Box sx={{ width: 64, height: 64, borderRadius: '50%', bgcolor: '#EEF0E9', color: '#68745B', display: 'grid', placeItems: 'center', mb: 2 }}>
+        <Icon name={icon} size={28} />
+      </Box>
+      <Typography variant="h6" sx={{ fontFamily: 'Georgia, serif', color: '#343B32' }}>{title}</Typography>
+      <Typography variant="body2" sx={{ color: '#72766E', mt: 1, maxWidth: 440 }}>{description}</Typography>
+    </Box>
+  );
+}
+
+function MoneySummary({ title, amount, highlight = false }) {
+  return (
+    <Paper elevation={0} sx={{ p: 2.5, border: '1px solid #E2E5DD', borderRadius: 3, bgcolor: highlight ? '#F1F4EE' : '#FFFFFF' }}>
+      <Typography variant="body2" color="text.secondary">{title}</Typography>
+      <Typography variant="h5" sx={{ mt: 1, fontWeight: 700, color: '#354337', overflowWrap: 'anywhere' }}>{formatPrice(amount)}</Typography>
+    </Paper>
+  );
+}
+
+function MoneyLine({ label, value, strong = false }) {
+  return (
+    <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
+      <Typography variant="body2" color={strong ? 'text.primary' : 'text.secondary'} fontWeight={strong ? 700 : 400}>{label}</Typography>
+      <Typography variant="body2" fontWeight={strong ? 700 : 600} sx={{ color: strong ? '#526047' : '#343B32' }}>{formatPrice(value)}</Typography>
+    </Stack>
+  );
+}
 
 export default function CustomerPortalView({ session, onLogout }) {
   const [activeSection, setActiveSection] = useState('reservas');
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const desktop = useMediaQuery('(min-width:900px)');
   const [selectedReservation, setSelectedReservation] = useState(null);
-
   const [customer, setCustomer] = useState(null);
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+  const [profileForm, setProfileForm] = useState({ name: '', email: '', phone: '', address: '' });
+  const [profileMessage, setProfileMessage] = useState('');
+  const [profileError, setProfileError] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
 
   useEffect(() => {
     let active = true;
-
-    const loadCustomerData = async () => {
+    async function loadCustomerData() {
       setLoading(true);
       setLoadError('');
-
       try {
         const [customerData, reservationData] = await Promise.all([
-          studioRequest(
-            `/api/clientes/${session.user.client_id}`,
-            { method: 'GET' },
-            session.token
-          ),
+          studioRequest(`/api/clientes/${session.user.client_id}`, { method: 'GET' }, session.token),
           fetchReservas(session.token)
         ]);
-
         if (!active) return;
-
         setCustomer(customerData);
-        setReservations(
-          Array.isArray(reservationData) ? reservationData : []
-        );
-
+        setReservations(Array.isArray(reservationData) ? reservationData : []);
         setProfileForm({
-          name: customerData.name || '',
-          email: customerData.email || '',
-          phone: customerData.phone || '',
-          address: customerData.address || ''
+          name: customerData.name || '', email: customerData.email || '',
+          phone: customerData.phone || '', address: customerData.address || ''
         });
       } catch (error) {
-        if (active) {
-          setLoadError(error.message);
-        }
+        if (active) setLoadError(error.message || 'No fue posible cargar tu información.');
       } finally {
-        if (active) {
-          setLoading(false);
-        }
+        if (active) setLoading(false);
       }
-    };
-
+    }
     loadCustomerData();
-
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [session.token, session.user.client_id]);
 
-  // Estados del formulario de perfil
-  const [profileForm, setProfileForm] = useState({
-    name: customer?.name || '',
-    email: customer?.email || '',
-    phone: customer?.phone || '',
-    address: customer?.address || ''
-  });
-
-  const [profileMessage, setProfileMessage] = useState('');
-  const [savingProfile, setSavingProfile] = useState(false);
-  const [profileError, setProfileError] = useState('');
-
-  // Resumen de pagos
-  const paymentSummary = useMemo(() => {
-    return reservations.reduce(
-      (summary, reservation) => {
-        summary.total += Number(reservation.total_cents || 0);
-        summary.paid += Number(reservation.paid_cents || 0);
-        return summary;
-      },
-      { total: 0, paid: 0 }
-    );
-  }, [reservations]);
-
-  const pendingBalance = Math.max(
-    paymentSummary.total - paymentSummary.paid,
-    0
+  const activeReservations = useMemo(() => reservations.filter((r) => !isCancelled(r)), [reservations]);
+  const paymentSummary = useMemo(() => activeReservations.reduce((acc, reservation) => ({
+    total: acc.total + moneyValue(reservation.total_cents),
+    paid: acc.paid + moneyValue(reservation.paid_cents)
+  }), { total: 0, paid: 0 }), [activeReservations]);
+  const pendingBalance = Math.max(paymentSummary.total - paymentSummary.paid, 0);
+  const activeInfo = SECTIONS.find((section) => section.id === activeSection) || SECTIONS[0];
+  const confirmedCount = reservations.filter((r) => String(r.status || '').toLowerCase() === 'confirmada').length;
+  const pendingCount = reservations.filter((r) => String(r.status || '').toLowerCase().includes('pendiente')).length;
+  const customerName = customer?.name || session?.user?.name || 'Cliente';
+  const firstName = customerName.trim().split(/\s+/)[0];
+  const sidebarWidth = 260;
+  const selectSection = (id) => { setActiveSection(id); setMobileNavOpen(false); };
+  const sidebar = (
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#FFFFFF' }}>
+      <Box sx={{ px: 3, pt: 4, pb: 3, borderBottom: '1px solid #E2E5DD' }}>
+        <Typography sx={{ fontFamily: 'Georgia, serif', fontSize: 24, color: '#343B32' }}>Luz &amp; Memoria</Typography>
+        <Typography variant="caption" sx={{ letterSpacing: 2, color: '#68745B' }}>PORTAL DEL CLIENTE</Typography>
+      </Box>
+      <Box component="nav" aria-label="Navegación del cliente" sx={{ p: 2, flexGrow: 1 }}>
+        <Typography variant="overline" sx={{ px: 2, color: '#879080', letterSpacing: 1.5 }}>MI ESPACIO</Typography>
+        <Stack spacing={0.75} sx={{ mt: 1 }}>
+          {SECTIONS.map((section) => {
+            const active = section.id === activeSection;
+            return (
+              <Button key={section.id} fullWidth onClick={() => selectSection(section.id)} aria-current={active ? 'page' : undefined}
+                startIcon={<Icon name={section.icon} size={19} />}
+                sx={{
+                  justifyContent: 'flex-start', textAlign: 'left', px: 2, py: 1.5, borderRadius: 2, textTransform: 'none',
+                  fontWeight: active ? 700 : 500, bgcolor: active ? '#E9EDE4' : 'transparent',
+                  color: active ? '#526047' : '#626B60',
+                  '&:hover': { bgcolor: '#F1F4EE' },
+                  '& .MuiButton-startIcon': { mr: 1.5 }
+                }}>
+                {section.label}
+              </Button>
+            );
+          })}
+        </Stack>
+      </Box>
+      <Box sx={{ p: 2, borderTop: '1px solid #E2E5DD' }}>
+        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ px: 1, pb: 2 }}>
+          <Avatar sx={{ bgcolor: '#E9EDE4', color: '#526047', width: 40, height: 40 }}>{firstName.charAt(0).toUpperCase()}</Avatar>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="body2" fontWeight={700} noWrap>{customerName}</Typography>
+            <Typography variant="caption" color="text.secondary">Cuenta de cliente</Typography>
+          </Box>
+        </Stack>
+        <Button fullWidth onClick={() => setLogoutDialogOpen(true)} startIcon={<Icon name="logout" />} sx={{ justifyContent: 'flex-start', color: '#526047', textTransform: 'none', px: 2 }}>Cerrar sesión</Button>
+      </Box>
+    </Box>
   );
 
-  // Sección de reservaciones
-  const renderReservations = () => {
-    if (!reservations.length) {
-      return (
-        <EmptyState
-          icon="calendar"
-          title="Todavía no tienes reservaciones"
-          description="Cuando tengas una reservación registrada, podrás consultar aquí la fecha, el paquete y el estado de tu evento."
-        />
-      );
+  async function handleSaveProfile(event) {
+    event.preventDefault();
+    setProfileMessage('');
+    setProfileError('');
+    const name = profileForm.name.trim();
+    const email = profileForm.email.trim();
+    const phone = profileForm.phone.trim();
+    const address = profileForm.address.trim();
+    if (name.length < 3 || !email) {
+      setProfileError('Escribe un nombre de al menos 3 caracteres y un correo válido.');
+      return;
     }
+    if (phone && !/^\d{10}$/.test(phone)) {
+      setProfileError('El teléfono debe contener exactamente 10 dígitos.');
+      return;
+    }
+    setSavingProfile(true);
+    try {
+      await updateCliente(session.user.client_id, { name, email, phone, address }, session.token);
+      const customerData = await studioRequest(
+        `/api/clientes/${session.user.client_id}`, { method: 'GET' }, session.token
+      );
+      setCustomer(customerData);
+      setProfileForm({
+        name: customerData.name || '', email: customerData.email || '',
+        phone: customerData.phone || '', address: customerData.address || ''
+      });
+      setProfileMessage('Tus datos se actualizaron correctamente.');
+    } catch (error) {
+      setProfileError(error.message || 'No se pudieron guardar los cambios.');
+    } finally {
+      setSavingProfile(false);
+    }
+  }
 
+  function renderReservations() {
+    if (!reservations.length) return (
+      <EmptySection icon="calendar" title="Todavía no tienes reservaciones" description="Cuando tengas una reservación registrada, aquí podrás consultar la fecha, el paquete y el estado de tu evento." />
+    );
     return (
       <Stack spacing={2} sx={{ mt: 3 }}>
         {reservations.map((reservation) => {
-          const status = reservation.status || 'Sin estado';
-
+          const total = moneyValue(reservation.total_cents);
+          const paid = moneyValue(reservation.paid_cents);
           return (
-            <Card
-              key={reservation.id}
-              elevation={0}
-              sx={{
-                border: '1px solid #E9E6DC',
-                borderRadius: 3
-              }}
-            >
-              <CardContent sx={{ p: 3 }}>
-                <Stack
-                  direction={{ xs: 'column', sm: 'row' }}
-                  justifyContent="space-between"
-                  alignItems={{ xs: 'flex-start', sm: 'center' }}
-                  spacing={2}
-                >
-                  <Box>
-                    <Typography
-                      variant="h6"
-                      sx={{
-                        fontFamily: 'Georgia, serif',
-                        color: '#343B32'
-                      }}
-                    >
-                      {reservation.event_type || 'Evento'}
-                    </Typography>
-
-                    <Stack
-                      direction="row"
-                      spacing={1}
-                      alignItems="center"
-                      sx={{ mt: 1 }}
-                    >
-                      <Icon name="calendar" />
-
-                      <Typography variant="body2" color="text.secondary">
-                        {formatDate(reservation.event_date)}
-                      </Typography>
-                    </Stack>
-
-                    <Typography
-                      variant="body2"
-                      sx={{ color: '#72766E', mt: 1 }}
-                    >
-                      Paquete:{' '}
-                      {packageNames[reservation.package] ||
-                        reservation.package ||
-                        'No especificado'}
-                    </Typography>
-                  </Box>
-
-                  <Stack
-                    alignItems={{ xs: 'flex-start', sm: 'flex-end' }}
-                    spacing={1}
-                  >
-                    <Chip
-                      label={status}
-                      color={getStatusColor(status)}
-                      size="small"
-                    />
-
-                    <Typography
-                      variant="h6"
-                      sx={{ color: '#68745B', fontWeight: 600 }}
-                    >
-                      {formatPrice(reservation.total_cents)}
-                    </Typography>
+            <Paper key={reservation.id} elevation={0} sx={{ p: { xs: 2, sm: 3 }, border: '1px solid #E2E5DD', borderRadius: 3 }}>
+              <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} gap={2}>
+                <Box>
+                  <Typography variant="h6" sx={{ fontFamily: 'Georgia, serif', color: '#343B32' }}>{reservation.event_type || 'Evento'}</Typography>
+                  <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1, color: '#68745B' }}>
+                    <Icon name="calendar" size={18} />
+                    <Typography variant="body2">{formatDate(reservation.event_date)}</Typography>
                   </Stack>
+                  <Typography variant="body2" sx={{ mt: 1, color: '#72766E' }}>Paquete: {PACKAGE_NAMES[reservation.package] || reservation.package || 'No especificado'}</Typography>
+                </Box>
+                <Stack alignItems={{ xs: 'flex-start', sm: 'flex-end' }} spacing={1}>
+                  <ReservationStatus status={reservation.status} />
+                  <Typography variant="h6" sx={{ color: '#354337', fontWeight: 700 }}>{formatPrice(total)}</Typography>
                 </Stack>
-
-                <Divider sx={{ my: 2 }} />
-
-                <Stack
-                  direction={{ xs: 'column', sm: 'row' }}
-                  justifyContent="space-between"
-                  alignItems={{ xs: 'stretch', sm: 'center' }}
-                  spacing={2}
-                >
-                  <Typography variant="body2" color="text.secondary">
-                    Anticipo registrado:{' '}
-                    <strong>
-                      {formatPrice(reservation.paid_cents)}
-                    </strong>
-                  </Typography>
-
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => setSelectedReservation(reservation)}
-                    sx={{
-                      borderColor: '#68745B',
-                      color: '#68745B'
-                    }}
-                  >
-                    Ver detalle
-                  </Button>
-                </Stack>
-              </CardContent>
-            </Card>
+              </Stack>
+              <Divider sx={{ my: 2 }} />
+              <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'stretch', sm: 'center' }} justifyContent="space-between" gap={2}>
+                <Box>
+                  <Typography variant="body2" color="text.secondary">Anticipo registrado: <strong>{formatPrice(paid)}</strong></Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>Saldo calculado: <strong>{formatPrice(Math.max(total - paid, 0))}</strong></Typography>
+                </Box>
+                <Button variant="outlined" onClick={() => setSelectedReservation(reservation)} sx={{ borderColor: '#AAB8A1', color: '#526047', textTransform: 'none' }}>Ver detalles</Button>
+              </Stack>
+            </Paper>
           );
         })}
       </Stack>
     );
-  };
+  }
 
-  // Sección de pagos
-  const renderPayments = () => (
-    <Box sx={{ mt: 3 }}>
-      {!reservations.length ? (
-        <EmptyState
-          icon="wallet"
-          title="No hay pagos registrados"
-          description="Cuando tengas reservaciones y pagos asociados a ellas, podrás consultar aquí tus movimientos."
-        />
-      ) : (
-        <>
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
-              gap: 2
-            }}
-          >
-            <SummaryCard
-              title="Total contratado"
-              amount={formatPrice(paymentSummary.total)}
-            />
-
-            <SummaryCard
-              title="Total pagado"
-              amount={formatPrice(paymentSummary.paid)}
-            />
-
-            <SummaryCard
-              title="Saldo pendiente"
-              amount={formatPrice(pendingBalance)}
-            />
-          </Box>
-
-          <Alert severity="info" sx={{ mt: 3 }}>
-            Aquí podrás consultar el historial y los comprobantes de tus pagos
-            cuando el servicio de pagos esté integrado.
-          </Alert>
-        </>
-      )}
-    </Box>
-  );
-
-  // Sección de galería
-  const renderGallery = () => (
-    <EmptyState
-      icon="image"
-      title="Tu galería estará aquí"
-      description="Cuando el estudio entregue las fotografías y videos de tu evento, podrás visualizarlos y descargarlos desde este espacio."
-    />
-  );
-
-  const handleSaveProfile = async () => {
-    setProfileMessage('');
-    setProfileError('');
-
-    if (!profileForm.name.trim() || !profileForm.email.trim()) {
-      setProfileError('El nombre y el correo son obligatorios.');
-      return;
-    }
-
-    setSavingProfile(true);
-
-    try {
-      const updatedCustomer = await updateCliente(
-        session.user.client_id,
-        profileForm,
-        session.token
-      );
-
-      const customerData = await studioRequest(
-        `/api/clientes/${session.user.client_id}`,
-        { method: 'GET' },
-        session.token
-      );
-
-      setCustomer(customerData);
-
-      setProfileForm({
-        name: customerData.name || '',
-        email: customerData.email || '',
-        phone: customerData.phone || '',
-        address: customerData.address || ''
-      });
-
-      setProfileMessage('Tus datos se actualizaron correctamente.');
-    } catch (error) {
-      setProfileError(error.message);
-    } finally {
-      setSavingProfile(false);
-    }
-  };
-
-  // Sección de perfil
-  const renderProfile = () => (
-    <Box sx={{ mt: 3 }}>
-      <Alert severity="info" sx={{ mb: 3 }}>
-        Puedes actualizar tus datos personales desde este apartado.
-        Los cambios se guardarán en tu cuenta al presionar Guardar cambios.
-      </Alert>
-
-      <Stack spacing={2.5}>
-        <TextField
-          label="Nombre completo"
-          value={profileForm.name}
-          onChange={(e) => {
-            setProfileForm({
-              ...profileForm,
-              name: e.target.value
-            });
-            setProfileMessage('');
-          }}
-          fullWidth
-        />
-
-        <TextField
-          label="Correo electrónico"
-          type="email"
-          value={profileForm.email}
-          onChange={(e) => {
-            setProfileForm({
-              ...profileForm,
-              email: e.target.value
-            });
-            setProfileMessage('');
-          }}
-          fullWidth
-        />
-
-        <TextField
-          label="Teléfono"
-          value={profileForm.phone}
-          onChange={(e) => {
-            setProfileForm({
-              ...profileForm,
-              phone: e.target.value.replace(/\D/g, '').slice(0, 10)
-            });
-            setProfileMessage('');
-          }}
-          inputProps={{ maxLength: 10 }}
-          fullWidth
-        />
-
-        <TextField
-          label="Dirección"
-          value={profileForm.address}
-          onChange={(e) => {
-            setProfileForm({
-              ...profileForm,
-              address: e.target.value
-            });
-            setProfileMessage('');
-          }}
-          multiline
-          rows={3}
-          fullWidth
-        />
-
-        <Button
-          variant="contained"
-          onClick={handleSaveProfile}
-          disabled={savingProfile}
-          sx={{
-            alignSelf: { xs: 'stretch', sm: 'flex-start' },
-            bgcolor: '#68745B',
-            '&:hover': {
-              bgcolor: '#59634B'
-            }
-          }}
-        >
-          {savingProfile ? 'Guardando...' : 'Guardar cambios'}
-        </Button>
-
-        {profileMessage && (
-          <Alert severity="success">
-            {profileMessage}
-          </Alert>
-        )}
-        {profileError && (
-          <Alert severity="error">
-            {profileError}
-          </Alert>
-        )}
-      </Stack>
-    </Box>
-  );
-
-  const sectionRenderers = {
-    reservas: renderReservations,
-    pagos: renderPayments,
-    galeria: renderGallery,
-    perfil: renderProfile
-  };
-
-  return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#F8F6F0' }}>
-      {/* ENCABEZADO */}
-      <Box
-        component="header"
-        sx={{
-          bgcolor: '#FFFFFF',
-          borderBottom: '1px solid #E9E6DC',
-          px: { xs: 2, md: 6 },
-          py: 2,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 2
-        }}
-      >
+  function renderPayments() {
+    if (!reservations.length) return (
+      <EmptySection icon="wallet" title="No hay información de pagos" description="Cuando tengas una reservación, podrás consultar aquí el total contratado, los anticipos y el saldo calculado." />
+    );
+    return (
+      <Stack spacing={3} sx={{ mt: 3 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' }, gap: 2 }}>
+          <MoneySummary title="Total contratado" amount={paymentSummary.total} />
+          <MoneySummary title="Anticipos registrados" amount={paymentSummary.paid} />
+          <MoneySummary title="Saldo calculado" amount={pendingBalance} highlight />
+        </Box>
+        <Typography variant="body2" color="text.secondary">Resumen de reservaciones no canceladas. Los importes de reservaciones canceladas no se incluyen en estos totales.</Typography>
         <Box>
-          <Typography
-            variant="h5"
-            sx={{ fontFamily: 'Georgia, serif', color: '#343B32' }}
-          >
-            Luz & Memoria
-          </Typography>
-
-          <Typography
-            variant="caption"
-            sx={{ letterSpacing: 2, color: '#7B856D' }}
-          >
-            ESPACIO DEL CLIENTE
-          </Typography>
-        </Box>
-
-        <Button
-          onClick={onLogout}
-          startIcon={<Icon name="logout" />}
-          sx={{ color: '#68745B' }}
-        >
-          Salir
-        </Button>
-      </Box>
-
-      <Container maxWidth="lg" sx={{ py: { xs: 4, md: 6 } }}>
-        {/* BIENVENIDA */}
-        <Box sx={{ mb: 4 }}>
-          <Typography
-            variant="overline"
-            sx={{ color: '#7B856D', letterSpacing: 3 }}
-          >
-            TU ESPACIO PERSONAL
-          </Typography>
-
-          <Typography
-            variant="h3"
-            sx={{
-              fontFamily: 'Georgia, serif',
-              color: '#343B32',
-              fontSize: { xs: 30, md: 40 },
-              mt: 1
-            }}
-          >
-            Hola{customer?.name ? `, ${customer.name}` : ''}.
-          </Typography>
-
-          <Typography sx={{ color: '#72766E', mt: 1 }}>
-            Consulta la información de tus eventos y conserva tus recuerdos
-            en un solo lugar.
-          </Typography>
-        </Box>
-
-        {/* NAVEGACIÓN */}
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: {
-              xs: 'repeat(2, 1fr)',
-              sm: 'repeat(4, 1fr)'
-            },
-            gap: 1.5,
-            mb: 4
-          }}
-        >
-          {sections.map((section) => {
-            const active = activeSection === section.id;
-
+          <Typography variant="h6" sx={{ fontFamily: 'Georgia, serif', color: '#343B32', mb: 2 }}>Desglose por reservación</Typography>
+          {reservations.map((reservation) => {
+            const total = moneyValue(reservation.total_cents);
+            const paid = moneyValue(reservation.paid_cents);
             return (
-              <Button
-                key={section.id}
-                onClick={() => setActiveSection(section.id)}
-                variant={active ? 'contained' : 'outlined'}
-                aria-pressed={active}
-                sx={{
-                  minHeight: 90,
-                  borderRadius: 3,
-                  flexDirection: 'column',
-                  gap: 1,
-                  borderColor: '#D9DDCF',
-                  bgcolor: active ? '#68745B' : '#FFFFFF',
-                  color: active ? '#FFFFFF' : '#59634B',
-                  '&:hover': {
-                    bgcolor: active ? '#59634B' : '#EEF0E9',
-                    borderColor: '#68745B'
-                  }
-                }}
-              >
-                <Icon name={section.icon} />
-
-                <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                  {section.label}
-                </Typography>
-              </Button>
+              <Paper key={reservation.id} elevation={0} sx={{ p: 2.5, mb: 2, border: '1px solid #E2E5DD', borderRadius: 3 }}>
+                <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} gap={1} sx={{ mb: 2 }}>
+                  <Box>
+                    <Typography fontWeight={700}>{reservation.event_type || 'Evento'}</Typography>
+                    <Typography variant="caption" color="text.secondary">{formatDate(reservation.event_date)}</Typography>
+                  </Box>
+                  <ReservationStatus status={reservation.status} />
+                </Stack>
+                <Stack spacing={1}>
+                  <MoneyLine label="Total del paquete" value={total} />
+                  <MoneyLine label="Anticipo registrado" value={paid} />
+                  <Divider />
+                  <MoneyLine label="Saldo calculado" value={Math.max(total - paid, 0)} strong />
+                </Stack>
+                {isCancelled(reservation) && <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5 }}>Reservación cancelada: este importe no se suma al resumen general. No representa una solicitud de pago.</Typography>}
+              </Paper>
             );
           })}
         </Box>
+        <Alert severity="info">Esta pantalla muestra los importes registrados en las reservaciones. El historial de movimientos, los comprobantes y las devoluciones requieren integración adicional.</Alert>
+      </Stack>
+    );
+  }
 
-        {loading && <LinearProgress sx={{ mb: 2 }} />}
+  function renderGallery() {
+    return <EmptySection icon="image" title="Tu galería estará aquí" description="Cuando el estudio publique las fotografías y los videos de tu evento, podrás consultarlos desde este espacio. Por ahora no hay contenido disponible en el portal." />;
+  }
 
-        {loadError && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {loadError}
-          </Alert>
-        )}
+  function renderProfile() {
+    return (
+      <Box component="form" onSubmit={handleSaveProfile} sx={{ mt: 3 }}>
+        <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 3 }}>
+          <Avatar sx={{ bgcolor: '#E9EDE4', color: '#526047', width: 54, height: 54 }}>{(customer?.name || 'C').trim().charAt(0).toUpperCase()}</Avatar>
+          <Box>
+            <Typography fontWeight={700}>{customer?.name || 'Mi cuenta'}</Typography>
+            <Typography variant="body2" color="text.secondary">Actualiza tu información de contacto</Typography>
+          </Box>
+        </Stack>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' }, gap: 2.5 }}>
+          <TextField required label="Nombre completo" value={profileForm.name} onChange={(e) => setProfileForm((prev) => ({ ...prev, name: e.target.value }))} slotProps={{ htmlInput: { minLength: 3, maxLength: 100 } }} fullWidth />
+          <TextField required type="email" label="Correo electrónico" value={profileForm.email} onChange={(e) => setProfileForm((prev) => ({ ...prev, email: e.target.value }))} slotProps={{ htmlInput: { maxLength: 160 } }} fullWidth />
+          <TextField label="Teléfono (10 dígitos)" value={profileForm.phone} onChange={(e) => setProfileForm((prev) => ({ ...prev, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }))} slotProps={{ htmlInput: { inputMode: 'numeric', maxLength: 10 } }} fullWidth />
+          <TextField label="Domicilio de entrega" value={profileForm.address} onChange={(e) => setProfileForm((prev) => ({ ...prev, address: e.target.value }))} slotProps={{ htmlInput: { maxLength: 250 } }} fullWidth multiline minRows={2} />
+        </Box>
+        {profileError && <Alert severity="error" sx={{ mt: 2 }}>{profileError}</Alert>}
+        {profileMessage && <Alert severity="success" sx={{ mt: 2 }}>{profileMessage}</Alert>}
+        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="flex-end" sx={{ mt: 3 }}>
+          <Button type="submit" variant="contained" disabled={savingProfile || loading || Boolean(loadError)} startIcon={savingProfile ? <CircularProgress size={16} color="inherit" /> : null} sx={{ bgcolor: '#68745B', textTransform: 'none', '&:hover': { bgcolor: '#526047' } }}>
+            {savingProfile ? 'Guardando...' : 'Guardar cambios'}
+          </Button>
+        </Stack>
+      </Box>
+    );
+  }
 
-        {/* CONTENIDO */}
-        <Card
-          elevation={0}
-          sx={{
-            border: '1px solid #E9E6DC',
-            borderRadius: 4,
-            bgcolor: '#FFFFFF',
-            minHeight: 330
-          }}
-        >
-          <CardContent sx={{ p: { xs: 3, md: 5 } }}>
-            <Typography
-              variant="h5"
-              sx={{ fontFamily: 'Georgia, serif', color: '#343B32' }}
-            >
-              {sections.find((item) => item.id === activeSection)?.label}
+  return (
+    <Box sx={{ minHeight: '100vh', bgcolor: '#F6F7F3', display: 'flex' }}>
+      {desktop ? (
+        <Box component="aside" sx={{ width: sidebarWidth, flexShrink: 0, borderRight: '1px solid #E2E5DD', bgcolor: '#FFFFFF' }}>
+          <Box sx={{ position: 'sticky', top: 0, height: '100vh' }}>{sidebar}</Box>
+        </Box>
+      ) : (
+        <Drawer open={mobileNavOpen} onClose={() => setMobileNavOpen(false)}
+          slotProps={{ paper: { sx: { width: sidebarWidth } } }}>{sidebar}</Drawer>
+      )}
+
+      <Box component="main" sx={{ flex: 1, minWidth: 0 }}>
+        <Box component="header" sx={{
+          bgcolor: '#FFFFFF', borderBottom: '1px solid #E2E5DD', px: { xs: 2, sm: 3, lg: 5 }, py: 2,
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2
+        }}>
+          <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0 }}>
+            {!desktop && <IconButton onClick={() => setMobileNavOpen(true)} aria-label="Abrir menú"><Icon name="menu" /></IconButton>}
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="body2" sx={{ color: '#818A7B' }}>Luz &amp; Memoria / Mi espacio</Typography>
+              <Typography fontWeight={700} sx={{ color: '#343B32' }}>{activeInfo.label}</Typography>
+            </Box>
+          </Stack>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Avatar sx={{ width: 36, height: 36, bgcolor: '#E9EDE4', color: '#526047' }}>{firstName.charAt(0).toUpperCase()}</Avatar>
+            {desktop && <Typography variant="body2" fontWeight={600} sx={{ color: '#526047' }}>{firstName}</Typography>}
+          </Stack>
+        </Box>
+
+        <Box sx={{ px: { xs: 2, sm: 3, lg: 5 }, py: { xs: 3, md: 4 }, maxWidth: 1500, mx: 'auto' }}>
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="overline" sx={{ color: '#68745B', letterSpacing: 2 }}>ESPACIO DEL CLIENTE</Typography>
+            <Typography variant="h4" sx={{ fontFamily: 'Georgia, serif', color: '#343B32', mt: 0.5, fontSize: { xs: 27, md: 34 } }}>
+              {activeSection === 'reservas' ? `Bienvenido, ${firstName}` : activeInfo.label}
             </Typography>
+            <Typography variant="body2" sx={{ color: '#72796D', mt: 1 }}>{activeInfo.description}</Typography>
+          </Box>
 
-            <Typography sx={{ color: '#72766E', mt: 1 }}>
-              {activeSection === 'reservas' &&
-                'Consulta las fechas y los detalles de tus eventos.'}
-              {activeSection === 'pagos' &&
-                'Revisa los importes y saldos de tus reservaciones.'}
-              {activeSection === 'galeria' &&
-                'Tus fotografías y videos estarán disponibles aquí.'}
-              {activeSection === 'perfil' &&
-                'Consulta la información de tu cuenta.'}
-            </Typography>
+          {loading && <LinearProgress sx={{ mb: 2, '& .MuiLinearProgress-bar': { bgcolor: '#68745B' } }} />}
+          {loadError && <Alert severity="error" sx={{ mb: 2 }}>{loadError}</Alert>}
 
-            {sectionRenderers[activeSection]()}
-          </CardContent>
-        </Card>
+          {!loading && !loadError && activeSection === 'reservas' && (
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' }, gap: 2, mb: 3 }}>
+              {[
+                { title: 'Total de reservaciones', value: reservations.length, icon: 'calendar' },
+                { title: 'Eventos confirmados', value: confirmedCount, icon: 'check' },
+                { title: 'Pendientes de anticipo', value: pendingCount, icon: 'wallet' }
+              ].map((stat) => (
+                <Paper key={stat.title} elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid #E2E5DD', bgcolor: '#FFFFFF' }}>
+                  <Stack direction="row" alignItems="flex-start" justifyContent="space-between" gap={2}>
+                    <Box>
+                      <Typography variant="body2" sx={{ color: '#72796D' }}>{stat.title}</Typography>
+                      <Typography variant="h3" sx={{ color: '#354337', fontWeight: 700, mt: 1 }}>{stat.value}</Typography>
+                    </Box>
+                    <Box sx={{ width: 44, height: 44, flexShrink: 0, borderRadius: 2, bgcolor: '#E9EDE4', color: '#68745B', display: 'grid', placeItems: 'center' }}>
+                      <Icon name={stat.icon} size={22} />
+                    </Box>
+                  </Stack>
+                </Paper>
+              ))}
+            </Box>
+          )}
 
-        <Box textAlign="center" mt={4}>
-          <Typography variant="caption" sx={{ color: '#888' }}>
-            Luz & Memoria · Cada historia merece ser recordada.
+          <Paper elevation={0} sx={{
+            border: '1px solid #E2E5DD', borderRadius: 3, bgcolor: '#FFFFFF', minHeight: 300,
+            p: { xs: 2, sm: 3 }
+          }}>
+            <Typography variant="h5" sx={{ fontFamily: 'Georgia, serif', color: '#343B32' }}>{activeInfo.label}</Typography>
+            <Typography variant="body2" sx={{ color: '#72796D', mt: 0.5 }}>{activeInfo.description}</Typography>
+            {!loading && !loadError && (
+              activeSection === 'reservas' ? renderReservations()
+                : activeSection === 'pagos' ? renderPayments()
+                  : activeSection === 'galeria' ? renderGallery()
+                    : renderProfile()
+            )}
+            {loading && <Typography variant="body2" color="text.secondary" sx={{ mt: 3 }}>Cargando tu información...</Typography>}
+          </Paper>
+          <Typography variant="caption" sx={{ display: 'block', mt: 3, textAlign: 'center', color: '#888' }}>
+            Luz &amp; Memoria · Cada historia merece ser recordada.
           </Typography>
         </Box>
-      </Container>
+      </Box>
 
-      {/* VENTANA DE DETALLE DE RESERVACIÓN */}
-      <Dialog
-        open={Boolean(selectedReservation)}
-        onClose={() => setSelectedReservation(null)}
-        fullWidth
-        maxWidth="sm"
-        PaperProps={{
-          sx: {
-            borderRadius: 4,
-            bgcolor: '#FFFFFF'
-          }
-        }}
-      >
-        {selectedReservation && (
-          <>
-            <DialogTitle
-              sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                pr: 2,
-                fontFamily: 'Georgia, serif',
-                color: '#343B32'
-              }}
-            >
-              Detalle de reservación
-
-              <IconButton
-                onClick={() => setSelectedReservation(null)}
-                aria-label="Cerrar detalle"
-              >
-                <Icon name="x" />
-              </IconButton>
-            </DialogTitle>
-
-            <DialogContent dividers sx={{ p: { xs: 2.5, sm: 3 } }}>
-              <Stack spacing={3}>
+      <LogoutConfirmDialog
+        open={logoutDialogOpen}
+        onClose={() => setLogoutDialogOpen(false)}
+        onConfirm={onLogout}
+      />
+      <Dialog open={Boolean(selectedReservation)} onClose={() => setSelectedReservation(null)} fullWidth maxWidth="sm" scroll="paper" slotProps={{ paper: { sx: { borderRadius: 3, maxHeight: 'calc(100dvh - 32px)' } } }}>
+        {selectedReservation && (() => {
+          const total = moneyValue(selectedReservation.total_cents);
+          const paid = moneyValue(selectedReservation.paid_cents);
+          const balance = Math.max(total - paid, 0);
+          const progress = total > 0 ? Math.min((paid / total) * 100, 100) : 0;
+          return (
+            <>
+              <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2 }}>
                 <Box>
-                  <Stack
-                    direction="row"
-                    justifyContent="space-between"
-                    alignItems="center"
-                    flexWrap="wrap"
-                    gap={1}
-                  >
-                    <Typography
-                      variant="overline"
-                      sx={{ color: '#7B856D', letterSpacing: 2 }}
-                    >
-                      RESERVACIÓN #{selectedReservation.id}
-                    </Typography>
-
-                    <Chip
-                      label={selectedReservation.status || 'Sin estado'}
-                      color={getStatusColor(selectedReservation.status)}
-                      size="small"
-                    />
+                  <Typography variant="overline" sx={{ color: '#68745B', letterSpacing: 2 }}>LUZ &amp; MEMORIA</Typography>
+                  <Typography variant="h5" sx={{ fontFamily: 'Georgia, serif', color: '#343B32' }}>Detalles de reservación</Typography>
+                </Box>
+                <IconButton aria-label="Cerrar detalles" onClick={() => setSelectedReservation(null)}><Icon name="x" /></IconButton>
+              </DialogTitle>
+              <DialogContent dividers sx={{ p: { xs: 2.5, sm: 3 } }}>
+                <Stack spacing={3}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" gap={2} flexWrap="wrap">
+                    <Typography variant="h6" sx={{ fontFamily: 'Georgia, serif', color: '#343B32' }}>{selectedReservation.event_type || 'Evento'}</Typography>
+                    <ReservationStatus status={selectedReservation.status} />
                   </Stack>
-
-                  <Typography
-                    variant="h4"
-                    sx={{
-                      fontFamily: 'Georgia, serif',
-                      color: '#343B32',
-                      mt: 1
-                    }}
-                  >
-                    {selectedReservation.event_type || 'Evento'}
-                  </Typography>
-                </Box>
-
-                <Box
-                  sx={{
-                    bgcolor: '#F8F6F0',
-                    borderRadius: 3,
-                    p: 2.5
-                  }}
-                >
-                  <DetailRow
-                    icon="calendar"
-                    label="Fecha del evento"
-                    value={formatDate(selectedReservation.event_date)}
-                  />
-
-                  <Divider sx={{ my: 2 }} />
-
-                  <DetailRow
-                    icon="camera"
-                    label="Paquete contratado"
-                    value={
-                      packageNames[selectedReservation.package] ||
-                      selectedReservation.package ||
-                      'No especificado'
-                    }
-                  />
-                </Box>
-
-                <Box>
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      fontFamily: 'Georgia, serif',
-                      color: '#343B32',
-                      mb: 2
-                    }}
-                  >
-                    Resumen de pago
-                  </Typography>
-
-                  {(() => {
-                    const total = Number(
-                      selectedReservation.total_cents || 0
-                    );
-                    const paid = Number(
-                      selectedReservation.paid_cents || 0
-                    );
-                    const pending = Math.max(total - paid, 0);
-                    const progress =
-                      total > 0
-                        ? Math.min((paid / total) * 100, 100)
-                        : 0;
-
-                    return (
-                      <Stack spacing={2}>
-                        <DetailMoneyRow
-                          label="Total del paquete"
-                          amount={formatPrice(total)}
-                        />
-
-                        <DetailMoneyRow
-                          label="Anticipo registrado"
-                          amount={formatPrice(paid)}
-                        />
-
-                        <DetailMoneyRow
-                          label="Saldo pendiente"
-                          amount={formatPrice(pending)}
-                          strong
-                        />
-
-                        <Box sx={{ pt: 1 }}>
-                          <Stack
-                            direction="row"
-                            justifyContent="space-between"
-                            sx={{ mb: 1 }}
-                          >
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              Avance de pago
-                            </Typography>
-
-                            <Typography
-                              variant="caption"
-                              sx={{ color: '#68745B', fontWeight: 600 }}
-                            >
-                              {Math.round(progress)}%
-                            </Typography>
-                          </Stack>
-
-                          <LinearProgress
-                            variant="determinate"
-                            value={progress}
-                            sx={{
-                              height: 9,
-                              borderRadius: 5,
-                              bgcolor: '#E9EDE4',
-                              '& .MuiLinearProgress-bar': {
-                                bgcolor: '#879174',
-                                borderRadius: 5
-                              }
-                            }}
-                          />
-                        </Box>
-                      </Stack>
-                    );
-                  })()}
-                </Box>
-
-                <Alert severity="info">
-                  La información de esta reservación corresponde a los datos
-                  recibidos del sistema. Para consultar movimientos y
-                  comprobantes detallados será necesaria la integración del
-                  servicio de pagos.
-                </Alert>
-              </Stack>
-            </DialogContent>
-          </>
-        )}
+                  <Paper elevation={0} sx={{ p: 2.5, borderRadius: 2, bgcolor: '#F8F6F0' }}>
+                    <Stack spacing={2}>
+                      <Box>
+                        <Typography variant="caption" color="text.secondary">Fecha del evento</Typography>
+                        <Typography fontWeight={600}>{formatDate(selectedReservation.event_date)}</Typography>
+                      </Box>
+                      <Divider />
+                      <Box>
+                        <Typography variant="caption" color="text.secondary">Paquete contratado</Typography>
+                        <Typography fontWeight={600}>{PACKAGE_NAMES[selectedReservation.package] || selectedReservation.package || 'No especificado'}</Typography>
+                      </Box>
+                    </Stack>
+                  </Paper>
+                  <Box>
+                    <Typography variant="h6" sx={{ fontFamily: 'Georgia, serif', color: '#343B32', mb: 2 }}>Información de pago</Typography>
+                    <Stack spacing={1.5}>
+                      <MoneyLine label="Total del paquete" value={total} />
+                      <MoneyLine label="Anticipo registrado" value={paid} />
+                      <Divider />
+                      <MoneyLine label="Saldo calculado" value={balance} strong />
+                      <Box sx={{ pt: 1 }}>
+                        <Stack direction="row" justifyContent="space-between" sx={{ mb: 1 }}>
+                          <Typography variant="caption" color="text.secondary">Avance de pago</Typography>
+                          <Typography variant="caption" fontWeight={700} sx={{ color: '#526047' }}>{Math.round(progress)}%</Typography>
+                        </Stack>
+                        <LinearProgress variant="determinate" value={progress} sx={{ height: 9, borderRadius: 5, bgcolor: '#E9EDE4', '& .MuiLinearProgress-bar': { bgcolor: '#879174', borderRadius: 5 } }} />
+                      </Box>
+                    </Stack>
+                  </Box>
+                  {isCancelled(selectedReservation) && <Alert severity="info">Esta reservación fue cancelada. Los importes se conservan como información histórica; el saldo mostrado no representa una solicitud de pago.</Alert>}
+                  <Alert severity="info">Los importes corresponden a los datos registrados en el sistema. Los comprobantes y movimientos detallados requieren integración adicional.</Alert>
+                </Stack>
+              </DialogContent>
+              <DialogActions sx={{ p: 2.5 }}>
+                <Button variant="contained" onClick={() => setSelectedReservation(null)} sx={{ bgcolor: '#68745B', '&:hover': { bgcolor: '#526047' } }}>Cerrar</Button>
+              </DialogActions>
+            </>
+          );
+        })()}
       </Dialog>
     </Box>
-  );
-}
-
-// COMPONENTES AUXILIARES
-
-function DetailRow({ icon, label, value }) {
-  return (
-    <Stack direction="row" spacing={1.5} alignItems="center">
-      <Box sx={{ color: '#68745B' }}>
-        <Icon name={icon} />
-      </Box>
-
-      <Box>
-        <Typography variant="caption" color="text.secondary">
-          {label}
-        </Typography>
-
-        <Typography sx={{ color: '#343B32', fontWeight: 500 }}>
-          {value}
-        </Typography>
-      </Box>
-    </Stack>
-  );
-}
-
-function DetailMoneyRow({ label, amount, strong = false }) {
-  return (
-    <Stack direction="row" justifyContent="space-between" spacing={2}>
-      <Typography
-        variant="body2"
-        color="text.secondary"
-        sx={{ fontWeight: strong ? 600 : 400 }}
-      >
-        {label}
-      </Typography>
-
-      <Typography
-        variant="body2"
-        sx={{
-          color: strong ? '#68745B' : '#343B32',
-          fontWeight: strong ? 700 : 500
-        }}
-      >
-        {amount}
-      </Typography>
-    </Stack>
-  );
-}
-
-function EmptyState({ icon, title, description }) {
-  return (
-    <Box
-      sx={{
-        minHeight: 220,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        textAlign: 'center',
-        py: 4
-      }}
-    >
-      <Box
-        sx={{
-          width: 64,
-          height: 64,
-          borderRadius: '50%',
-          bgcolor: '#EEF0E9',
-          color: '#68745B',
-          display: 'grid',
-          placeItems: 'center',
-          mb: 2
-        }}
-      >
-        <Icon name={icon} />
-      </Box>
-
-      <Typography
-        variant="h6"
-        sx={{ fontFamily: 'Georgia, serif', color: '#343B32' }}
-      >
-        {title}
-      </Typography>
-
-      <Typography
-        variant="body2"
-        sx={{ color: '#72766E', mt: 1, maxWidth: 430 }}
-      >
-        {description}
-      </Typography>
-    </Box>
-  );
-}
-
-function SummaryCard({ title, amount }) {
-  return (
-    <Card
-      elevation={0}
-      sx={{
-        bgcolor: '#F8F6F0',
-        border: '1px solid #E9E6DC',
-        borderRadius: 3
-      }}
-    >
-      <CardContent>
-        <Typography variant="body2" color="text.secondary">
-          {title}
-        </Typography>
-
-        <Typography
-          variant="h5"
-          sx={{
-            mt: 1,
-            color: '#68745B',
-            fontWeight: 600
-          }}
-        >
-          {amount}
-        </Typography>
-      </CardContent>
-    </Card>
   );
 }
