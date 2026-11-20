@@ -1,5 +1,12 @@
 
-import { Alert, Box, Button, CircularProgress, Stack, Typography } from '@mui/material';
+import {
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  Stack,
+  Typography
+} from '@mui/material';
 
 import Sidebar from './Sidebar';
 import Header from './Header';
@@ -26,6 +33,8 @@ export default function MainLayout({ children }) {
     estudioMenu.children[0];
 
   const handlePrimaryAction = () => {
+    if (page === 'paquetes') return;
+
     if (page === 'clientes' || !clients.length) {
       openClientModal();
     } else {
@@ -107,6 +116,7 @@ export default function MainLayout({ children }) {
                   variant="contained"
                   startIcon={<Icon name="plus" />}
                   onClick={handlePrimaryAction}
+                  disabled={page === 'paquetes'}
                 >
                   {primaryActionLabel}
                 </Button>

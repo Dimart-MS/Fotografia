@@ -28,10 +28,10 @@ const estudioMenu = {
     {
       id: 'reservas',
       title: 'Agenda y reservas',
-      breadcrumb: 'Reservaciones',
-      eyebrow: 'GESTIÓN DE RESERVACIONES',
-      heading: 'Agenda y reservaciones',
-      subtitle: 'Disponibilidad, solicitudes y anticipos.',
+      breadcrumb: 'Agenda y reservas',
+      eyebrow: 'CONTROL DE FECHAS Y ANTICIPOS',
+      heading: 'Agenda y reservas',
+      subtitle: 'Disponibilidad mensual, solicitudes pendientes y confirmación de anticipos.',
       icon: 'calendar',
       section: 'OPERACIONES'
     },
@@ -39,12 +39,11 @@ const estudioMenu = {
       id: 'paquetes',
       title: 'Paquetes',
       breadcrumb: 'Paquetes',
-      eyebrow: 'CATÁLOGO',
+      eyebrow: 'CATÁLOGO DE SERVICIOS',
       heading: 'Paquetes fotográficos',
-      subtitle: 'Consulta y administración de paquetes.',
-      icon: 'camera',
-      section: 'CATÁLOGO',
-      enabled: false
+      subtitle: 'Administra los paquetes, precios y servicios que ofrece el estudio.',
+      icon: 'package',
+      section: 'CATÁLOGO'
     },
     {
       id: 'servicios',

@@ -1,42 +1,60 @@
 
-import { Box, Button, Card, CardContent, Container, Stack, Typography } from '@mui/material';
+import { useEffect, useState } from 'react';
+import {
+    Box,
+    Button,
+    Card,
+    CardContent,
+    Container,
+    Stack,
+    Typography
+} from '@mui/material';
+
 import Icon from '../../ui-component/Icon';
-
-const packages = [
-    {
-        id: 'foto',
-        name: 'Fotografía',
-        description: 'Capturamos los momentos más especiales de tu evento.',
-        price: 3500
-    },
-    {
-        id: 'video',
-        name: 'Video',
-        description: 'Conservamos tus recuerdos a través de una producción audiovisual.',
-        price: 4500
-    },
-    {
-        id: 'combinado',
-        name: 'Fotografía y video',
-        description: 'Una cobertura completa para recordar cada detalle.',
-        price: 7000
-    }
-];
-
-const formatPrice = (price) =>
-    new Intl.NumberFormat('es-MX', {
-        style: 'currency',
-        currency: 'MXN',
-        maximumFractionDigits: 0
-    }).format(price);
+import { fetchPaquetes } from '../../api/reservasService';
 
 export default function HomeView({
     onLogin,
     onAvailability,
-    onRegister
+    onRegister,
+    onCustomerLogin
 }) {
+    const [packages, setPackages] = useState([]);
+    const [loadingPackages, setLoadingPackages] = useState(true);
+    const [packagesError, setPackagesError] = useState('');
+
+    // Cargar paquetes desde el backend
+    useEffect(() => {
+        const loadPackages = async () => {
+            try {
+                setLoadingPackages(true);
+                setPackagesError('');
+
+                const response = await fetchPaquetes();
+
+                setPackages(Array.isArray(response) ? response : []);
+            } catch (error) {
+                console.error('Error al cargar paquetes:', error);
+                setPackagesError('No fue posible cargar nuestros paquetes.');
+            } finally {
+                setLoadingPackages(false);
+            }
+        };
+
+        loadPackages();
+    }, []);
+
+    // Convertir centavos a pesos mexicanos
+    const formatPrice = (price) =>
+        new Intl.NumberFormat('es-MX', {
+            style: 'currency',
+            currency: 'MXN',
+            maximumFractionDigits: 0
+        }).format(Number(price || 0) / 100);
+
     return (
         <Box sx={{ minHeight: '100vh', bgcolor: '#F8F6F0', color: '#343B32' }}>
+
             {/* ENCABEZADO */}
             <Box
                 component="header"
@@ -51,9 +69,13 @@ export default function HomeView({
                 }}
             >
                 <Box>
-                    <Typography variant="h5" sx={{ fontFamily: 'Georgia, serif', fontWeight: 600 }}>
+                    <Typography
+                        variant="h5"
+                        sx={{ fontFamily: 'Georgia, serif', fontWeight: 600 }}
+                    >
                         Luz & Memoria
                     </Typography>
+
                     <Typography variant="caption" sx={{ letterSpacing: 2 }}>
                         ESTUDIO FOTOGRÁFICO
                     </Typography>
@@ -164,7 +186,11 @@ export default function HomeView({
 
                 <Typography
                     variant="h3"
-                    sx={{ fontFamily: 'Georgia, serif', my: 2, fontSize: { xs: 30, md: 40 } }}
+                    sx={{
+                        fontFamily: 'Georgia, serif',
+                        my: 2,
+                        fontSize: { xs: 30, md: 40 }
+                    }}
                 >
                     Momentos únicos, recuerdos para siempre.
                 </Typography>
@@ -179,12 +205,19 @@ export default function HomeView({
             {/* PAQUETES */}
             <Box id="paquetes" sx={{ bgcolor: '#EEECE3', py: 8 }}>
                 <Container maxWidth="lg">
+
                     <Box sx={{ textAlign: 'center', mb: 5 }}>
-                        <Typography variant="overline" sx={{ letterSpacing: 3, color: '#7B856D' }}>
+                        <Typography
+                            variant="overline"
+                            sx={{ letterSpacing: 3, color: '#7B856D' }}
+                        >
                             LO QUE OFRECEMOS
                         </Typography>
 
-                        <Typography variant="h3" sx={{ fontFamily: 'Georgia, serif', mt: 1 }}>
+                        <Typography
+                            variant="h3"
+                            sx={{ fontFamily: 'Georgia, serif', mt: 1 }}
+                        >
                             Nuestros paquetes
                         </Typography>
 
@@ -193,60 +226,106 @@ export default function HomeView({
                         </Typography>
                     </Box>
 
-                    <Box
-                        sx={{
-                            display: 'grid',
-                            gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
-                            gap: 3
-                        }}
-                    >
-                        {packages.map((item) => (
-                            <Card
-                                key={item.id}
-                                elevation={0}
-                                sx={{
-                                    borderRadius: 3,
-                                    bgcolor: '#FFFFFF',
-                                    textAlign: 'center',
-                                    p: 2
-                                }}
-                            >
-                                <CardContent>
-                                    <Box
-                                        sx={{
-                                            width: 55,
-                                            height: 55,
-                                            borderRadius: '50%',
-                                            bgcolor: '#E9EDE4',
-                                            color: '#68745B',
-                                            display: 'grid',
-                                            placeItems: 'center',
-                                            mx: 'auto',
-                                            mb: 2
-                                        }}
-                                    >
-                                        <Icon name="camera" />
-                                    </Box>
+                    {/* CARGANDO */}
+                    {loadingPackages && (
+                        <Typography textAlign="center" sx={{ py: 4 }}>
+                            Cargando nuestros paquetes...
+                        </Typography>
+                    )}
 
-                                    <Typography variant="h5" sx={{ fontFamily: 'Georgia, serif' }}>
-                                        {item.name}
-                                    </Typography>
+                    {/* ERROR */}
+                    {!loadingPackages && packagesError && (
+                        <Typography
+                            textAlign="center"
+                            color="error"
+                            sx={{ py: 4 }}
+                        >
+                            {packagesError}
+                        </Typography>
+                    )}
 
-                                    <Typography sx={{ color: '#777', my: 2, minHeight: 55 }}>
-                                        {item.description}
-                                    </Typography>
+                    {/* LISTADO DE PAQUETES */}
+                    {!loadingPackages && !packagesError && packages.length > 0 && (
+                        <Box
+                            sx={{
+                                display: 'grid',
+                                gridTemplateColumns: {
+                                    xs: '1fr',
+                                    md: 'repeat(3, 1fr)'
+                                },
+                                gap: 3
+                            }}
+                        >
+                            {packages.map((item) => (
+                                <Card
+                                    key={item.id}
+                                    elevation={0}
+                                    sx={{
+                                        borderRadius: 3,
+                                        bgcolor: '#FFFFFF',
+                                        textAlign: 'center',
+                                        p: 2
+                                    }}
+                                >
+                                    <CardContent>
+                                        <Box
+                                            sx={{
+                                                width: 55,
+                                                height: 55,
+                                                borderRadius: '50%',
+                                                bgcolor: '#E9EDE4',
+                                                color: '#68745B',
+                                                display: 'grid',
+                                                placeItems: 'center',
+                                                mx: 'auto',
+                                                mb: 2
+                                            }}
+                                        >
+                                            <Icon name="camera" />
+                                        </Box>
 
-                                    <Typography variant="h4" sx={{ color: '#68745B', fontWeight: 600 }}>
-                                        {formatPrice(item.price)}
-                                    </Typography>
+                                        <Typography
+                                            variant="h5"
+                                            sx={{ fontFamily: 'Georgia, serif' }}
+                                        >
+                                            {item.name}
+                                        </Typography>
 
-                                    <Typography variant="caption" color="text.secondary">
-                                        Precio del paquete
-                                    </Typography>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </Box>
+                                        <Typography
+                                            sx={{
+                                                color: '#777',
+                                                my: 2,
+                                                minHeight: 55
+                                            }}
+                                        >
+                                            {item.description || 'Consulta los detalles de este paquete.'}
+                                        </Typography>
+
+                                        <Typography
+                                            variant="h4"
+                                            sx={{ color: '#68745B', fontWeight: 600 }}
+                                        >
+                                            {formatPrice(item.price_cents)}
+                                        </Typography>
+
+                                        <Typography
+                                            variant="caption"
+                                            color="text.secondary"
+                                        >
+                                            Precio del paquete
+                                        </Typography>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </Box>
+                    )}
+
+                    {/* SIN PAQUETES */}
+                    {!loadingPackages && !packagesError && packages.length === 0 && (
+                        <Typography textAlign="center" sx={{ py: 4, color: '#777' }}>
+                            Por el momento no hay paquetes disponibles.
+                        </Typography>
+                    )}
 
                     <Typography
                         variant="caption"
@@ -261,7 +340,10 @@ export default function HomeView({
 
             {/* CONTACTO Y PIE */}
             <Box sx={{ py: 6, textAlign: 'center' }}>
-                <Typography variant="h4" sx={{ fontFamily: 'Georgia, serif', mb: 2 }}>
+                <Typography
+                    variant="h4"
+                    sx={{ fontFamily: 'Georgia, serif', mb: 2 }}
+                >
                     Hagamos inolvidable tu historia.
                 </Typography>
 
@@ -311,7 +393,11 @@ export default function HomeView({
                     </Button>
                 </Stack>
 
-                <Typography variant="caption" display="block" sx={{ mt: 5, color: '#888' }}>
+                <Typography
+                    variant="caption"
+                    display="block"
+                    sx={{ mt: 5, color: '#888' }}
+                >
                     © {new Date().getFullYear()} Luz & Memoria · Estudio fotográfico
                 </Typography>
             </Box>

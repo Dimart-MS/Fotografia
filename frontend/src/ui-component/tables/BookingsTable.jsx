@@ -2,7 +2,12 @@
 import { useState } from 'react';
 
 import {
+  Alert,
   Box,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  Divider,
   IconButton,
   Menu,
   MenuItem,
@@ -13,6 +18,7 @@ import {
 
 import StatusBadge from '../StatusBadge';
 import EmptyState from '../EmptyState';
+import Icon from '../Icon';
 
 import {
   formatMoney,
@@ -34,25 +40,29 @@ export default function BookingsTable({
 }) {
   // Estado del menú de acciones
   const [anchorEl, setAnchorEl] = useState(null);
+  const [menuBooking, setMenuBooking] = useState(null);
+
+  // Estado independiente para el diálogo de detalles
   const [selectedBooking, setSelectedBooking] = useState(null);
 
-  // Abrir menú para una reservación específica
+  // Abrir menú de acciones
   const handleOpenMenu = (event, booking) => {
     setAnchorEl(event.currentTarget);
-    setSelectedBooking(booking);
+    setMenuBooking(booking);
   };
 
   // Cerrar menú
   const handleCloseMenu = () => {
     setAnchorEl(null);
-    setSelectedBooking(null);
+    setMenuBooking(null);
   };
 
-  // Consultar detalles
+  // Abrir detalles
   const handleViewDetails = () => {
-    const booking = selectedBooking;
+    const booking = menuBooking;
 
     handleCloseMenu();
+    setSelectedBooking(booking);
 
     if (booking && onOpenBookingDetails) {
       onOpenBookingDetails(booking);
@@ -61,7 +71,7 @@ export default function BookingsTable({
 
   // Confirmar anticipo
   const handleConfirm = () => {
-    const booking = selectedBooking;
+    const booking = menuBooking;
 
     handleCloseMenu();
 
@@ -72,13 +82,18 @@ export default function BookingsTable({
 
   // Cancelar reservación
   const handleCancel = () => {
-    const booking = selectedBooking;
+    const booking = menuBooking;
 
     handleCloseMenu();
 
     if (booking && onOpenCancelBooking) {
       onOpenCancelBooking(booking);
     }
+  };
+
+  // Cerrar diálogo de detalles
+  const closeDetails = () => {
+    setSelectedBooking(null);
   };
 
   // ==============================|| SIN RESERVACIONES ||============================== //
@@ -104,6 +119,18 @@ export default function BookingsTable({
     );
   }
 
+  // Paquete de la reservación seleccionada
+  const selectedPackage = selectedBooking
+    ? packages.find(
+        (pkg) => String(pkg.id) === String(selectedBooking.package)
+      )
+    : null;
+
+  // Información de pagos
+  const total = Number(selectedBooking?.total_cents || 0);
+  const paid = Number(selectedBooking?.paid_cents || 0);
+  const pending = Math.max(total - paid, 0);
+
   // ==============================|| TABLA DE RESERVACIONES ||============================== //
 
   return (
@@ -116,32 +143,29 @@ export default function BookingsTable({
               <th>Fecha del evento</th>
               <th>Estado</th>
               <th>Información de pago</th>
-              <th style={{ textAlign: 'center' }}>
-                Acciones
-              </th>
+              <th style={{ textAlign: 'center' }}>Acciones</th>
             </tr>
           </thead>
 
           <tbody>
             {rows.map((booking) => {
-              // Buscar el paquete contratado
               const packageObj = packages.find(
                 (pkg) =>
                   String(pkg.id) === String(booking.package)
               );
 
-              // Verificar si está pendiente
               const isPending =
                 booking.status === 'Pendiente de anticipo';
 
-              // Calcular información de pago
-              const total = Number(booking.total_cents) || 0;
-              const paid = Number(booking.paid_cents) || 0;
-              const remaining = Math.max(total - paid, 0);
+              const bookingTotal = Number(booking.total_cents) || 0;
+              const bookingPaid = Number(booking.paid_cents) || 0;
+              const remaining = Math.max(
+                bookingTotal - bookingPaid,
+                0
+              );
 
               return (
                 <tr key={booking.id}>
-
                   {/* CLIENTE Y EVENTO */}
                   <td>
                     <strong>
@@ -156,7 +180,7 @@ export default function BookingsTable({
                     </small>
                   </td>
 
-                  {/* FECHA DEL EVENTO */}
+                  {/* FECHA */}
                   <td>
                     {formatPrettyDate(booking.event_date)}
                   </td>
@@ -172,27 +196,22 @@ export default function BookingsTable({
                       <Typography
                         variant="body2"
                         fontWeight={700}
-                        sx={{
-                          color: '#254C41'
-                        }}
+                        sx={{ color: '#254C41' }}
                       >
-                        {formatMoney(total)}
+                        {formatMoney(bookingTotal)}
                       </Typography>
 
                       <Typography
                         variant="caption"
                         color="text.secondary"
                       >
-                        Pagado: {formatMoney(paid)}
+                        Pagado: {formatMoney(bookingPaid)}
                       </Typography>
 
                       <Typography
                         variant="caption"
                         sx={{
-                          color:
-                            remaining > 0
-                              ? '#9A6A32'
-                              : '#526047'
+                          color: remaining > 0 ? '#9A6A32' : '#526047'
                         }}
                       >
                         Saldo: {formatMoney(remaining)}
@@ -205,12 +224,11 @@ export default function BookingsTable({
                     <Tooltip title="Opciones de reserva">
                       <IconButton
                         size="small"
-                        aria-label={`Acciones de la reserva de ${booking.client_name || 'cliente'
-                          }`}
+                        aria-label={`Acciones de la reserva de ${booking.client_name || 'cliente'}`}
                         aria-haspopup="menu"
                         aria-expanded={
                           Boolean(anchorEl) &&
-                            selectedBooking?.id === booking.id
+                          menuBooking?.id === booking.id
                             ? 'true'
                             : undefined
                         }
@@ -268,8 +286,6 @@ export default function BookingsTable({
           }
         }}
       >
-
-        {/* VER DETALLES - TODAS LAS RESERVACIONES */}
         <MenuItem
           onClick={handleViewDetails}
           disabled={!onOpenBookingDetails}
@@ -282,8 +298,7 @@ export default function BookingsTable({
           Ver detalles
         </MenuItem>
 
-        {/* ACCIONES SOLO PARA RESERVACIONES PENDIENTES */}
-        {selectedBooking?.status === 'Pendiente de anticipo' && (
+        {menuBooking?.status === 'Pendiente de anticipo' && (
           <>
             <MenuItem
               onClick={handleConfirm}
@@ -311,6 +326,235 @@ export default function BookingsTable({
           </>
         )}
       </Menu>
+
+      {/* ==============================|| DETALLE DE RESERVACIÓN ||============================== */}
+
+      <Dialog
+        open={Boolean(selectedBooking)}
+        onClose={closeDetails}
+        fullWidth
+        maxWidth="sm"
+        PaperProps={{
+          sx: {
+            borderRadius: 4,
+            bgcolor: '#FFFFFF'
+          }
+        }}
+      >
+        {selectedBooking && (
+          <>
+            <DialogTitle
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontFamily: 'Georgia, serif',
+                color: '#343B32'
+              }}
+            >
+              Detalle de reservación
+
+              <IconButton
+                onClick={closeDetails}
+                aria-label="Cerrar detalle"
+              >
+                <Icon name="x" />
+              </IconButton>
+            </DialogTitle>
+
+            <DialogContent dividers>
+              <Stack spacing={3} sx={{ py: 1 }}>
+                {/* INFORMACIÓN DEL CLIENTE */}
+                <Box>
+                  <Typography
+                    variant="overline"
+                    sx={{
+                      color: '#7B856D',
+                      letterSpacing: 2
+                    }}
+                  >
+                    INFORMACIÓN DEL CLIENTE
+                  </Typography>
+
+                  <Typography
+                    variant="h5"
+                    sx={{
+                      fontFamily: 'Georgia, serif',
+                      color: '#343B32',
+                      mt: 1
+                    }}
+                  >
+                    {selectedBooking.client_name || 'Cliente no disponible'}
+                  </Typography>
+                </Box>
+
+                <Divider />
+
+                {/* INFORMACIÓN DEL EVENTO */}
+                <Box>
+                  <Typography
+                    variant="overline"
+                    sx={{
+                      color: '#7B856D',
+                      letterSpacing: 2
+                    }}
+                  >
+                    INFORMACIÓN DEL EVENTO
+                  </Typography>
+
+                  <Stack spacing={2} sx={{ mt: 2 }}>
+                    <DetailItem
+                      icon="calendar"
+                      label="Fecha del evento"
+                      value={formatPrettyDate(selectedBooking.event_date)}
+                    />
+
+                    <DetailItem
+                      icon="camera"
+                      label="Tipo de evento"
+                      value={selectedBooking.event_type || 'No especificado'}
+                    />
+
+                    <DetailItem
+                      icon="package"
+                      label="Paquete contratado"
+                      value={
+                        selectedPackage?.name ||
+                        selectedBooking.package ||
+                        'No especificado'
+                      }
+                    />
+
+                    <DetailItem
+                      icon="hash"
+                      label="Número de reservación"
+                      value={String(selectedBooking.id)}
+                    />
+                  </Stack>
+                </Box>
+
+                <Divider />
+
+                {/* ESTADO */}
+                <Box>
+                  <Typography
+                    variant="overline"
+                    sx={{
+                      color: '#7B856D',
+                      letterSpacing: 2
+                    }}
+                  >
+                    ESTADO DE LA RESERVACIÓN
+                  </Typography>
+
+                  <Box sx={{ mt: 1 }}>
+                    <StatusBadge status={selectedBooking.status} />
+                  </Box>
+                </Box>
+
+                <Divider />
+
+                {/* INFORMACIÓN DE PAGO */}
+                <Box>
+                  <Typography
+                    variant="overline"
+                    sx={{
+                      color: '#7B856D',
+                      letterSpacing: 2
+                    }}
+                  >
+                    RESUMEN DE PAGO
+                  </Typography>
+
+                  <Stack spacing={2} sx={{ mt: 2 }}>
+                    <MoneyItem
+                      label="Total del paquete"
+                      amount={formatMoney(total)}
+                    />
+
+                    <MoneyItem
+                      label="Anticipo registrado"
+                      amount={formatMoney(paid)}
+                    />
+
+                    <Divider />
+
+                    <MoneyItem
+                      label="Saldo pendiente"
+                      amount={formatMoney(pending)}
+                      strong
+                    />
+                  </Stack>
+                </Box>
+
+                <Alert severity="info">
+                  Los datos mostrados corresponden a la información
+                  disponible en el sistema. El historial detallado de
+                  movimientos y comprobantes de pago se integrará
+                  posteriormente.
+                </Alert>
+              </Stack>
+            </DialogContent>
+          </>
+        )}
+      </Dialog>
     </>
+  );
+}
+
+// ==============================|| COMPONENTES AUXILIARES ||============================== //
+
+function DetailItem({ icon, label, value }) {
+  return (
+    <Stack direction="row" spacing={1.5} alignItems="center">
+      <Box sx={{ color: '#68745B' }}>
+        <Icon name={icon} />
+      </Box>
+
+      <Box>
+        <Typography variant="caption" color="text.secondary">
+          {label}
+        </Typography>
+
+        <Typography
+          variant="body2"
+          sx={{
+            color: '#343B32',
+            fontWeight: 500
+          }}
+        >
+          {value}
+        </Typography>
+      </Box>
+    </Stack>
+  );
+}
+
+function MoneyItem({ label, amount, strong = false }) {
+  return (
+    <Stack
+      direction="row"
+      justifyContent="space-between"
+      alignItems="center"
+      spacing={2}
+    >
+      <Typography
+        variant="body2"
+        color="text.secondary"
+        sx={{ fontWeight: strong ? 600 : 400 }}
+      >
+        {label}
+      </Typography>
+
+      <Typography
+        variant="body2"
+        sx={{
+          color: strong ? '#68745B' : '#343B32',
+          fontWeight: strong ? 700 : 500
+        }}
+      >
+        {amount}
+      </Typography>
+    </Stack>
   );
 }

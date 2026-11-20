@@ -1,5 +1,6 @@
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+
 import {
   Alert,
   Box,
@@ -11,34 +12,20 @@ import {
   TextField,
   Typography
 } from '@mui/material';
-import { createReserva } from '../../api/reservasService';
+
+import {
+  createReserva,
+  fetchPaquetes
+} from '../../api/reservasService';
 
 const EVENT_TYPES = ['Boda', 'XV años', 'Bautizo', 'Fiesta'];
-
-const PACKAGES = [
-  {
-    id: 'foto',
-    name: 'Fotografía',
-    price: 3500
-  },
-  {
-    id: 'video',
-    name: 'Video',
-    price: 4500
-  },
-  {
-    id: 'combinado',
-    name: 'Fotografía y video',
-    price: 7000
-  }
-];
 
 const formatPrice = (amount) =>
   new Intl.NumberFormat('es-MX', {
     style: 'currency',
     currency: 'MXN',
     maximumFractionDigits: 2
-  }).format(amount);
+  }).format(Number(amount || 0));
 
 export default function BookingRequestView({
   selectedDate,
@@ -50,9 +37,47 @@ export default function BookingRequestView({
   const [eventType, setEventType] = useState('');
   const [packageId, setPackageId] = useState('');
 
+  const [packages, setPackages] = useState([]);
+  const [loadingPackages, setLoadingPackages] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Cargar paquetes activos desde el backend
+  useEffect(() => {
+    const loadPackages = async () => {
+      try {
+        setLoadingPackages(true);
+        setError('');
+
+        const response = await fetchPaquetes();
+
+        const activePackages = Array.isArray(response)
+          ? response.filter((item) => item.active !== false)
+          : [];
+
+        setPackages(activePackages);
+      } catch (err) {
+        console.error('Error al cargar paquetes:', err);
+        setError(err.message || 'No se pudieron cargar los paquetes.');
+      } finally {
+        setLoadingPackages(false);
+      }
+    };
+
+    loadPackages();
+  }, []);
+
+  // Identificar el paquete seleccionado
+  const selectedPackage = useMemo(
+    () => packages.find((item) => item.id === packageId),
+    [packages, packageId]
+  );
+
+  // Los precios de la API vienen en centavos
+  const total = Number(selectedPackage?.price_cents || 0) / 100;
+  const minimumDeposit = total * 0.5;
+
+  // Registrar solicitud de reservación
   const handleReservation = async () => {
     setError('');
 
@@ -81,36 +106,32 @@ export default function BookingRequestView({
 
       onReservationCreated(reservation);
     } catch (err) {
+      console.error('Error al registrar reservación:', err);
       setError(err.message || 'No se pudo registrar la reservación.');
     } finally {
       setLoading(false);
     }
   };
 
-  const selectedPackage = useMemo(
-    () => PACKAGES.find((item) => item.id === packageId),
-    [packageId]
-  );
-
-  const total = selectedPackage?.price || 0;
-  const minimumDeposit = total * 0.5;
-
+  // Formatear fecha seleccionada
   const formattedDate = selectedDate
     ? new Intl.DateTimeFormat('es-MX', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    }).format(new Date(`${selectedDate}T12:00:00`))
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      }).format(new Date(`${selectedDate}T12:00:00`))
     : 'No se ha seleccionado una fecha';
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#F8F6F0', py: 5 }}>
       <Container maxWidth="md">
+
         <Button onClick={onBack} sx={{ color: '#68745B', mb: 3 }}>
           ← Volver al calendario
         </Button>
 
+        {/* ENCABEZADO */}
         <Box textAlign="center" mb={4}>
           <Typography
             variant="overline"
@@ -145,6 +166,8 @@ export default function BookingRequestView({
           }}
         >
           <Stack spacing={3}>
+
+            {/* FECHA */}
             <Box>
               <Typography
                 variant="overline"
@@ -165,6 +188,7 @@ export default function BookingRequestView({
               </Typography>
             </Box>
 
+            {/* TIPO DE EVENTO */}
             <TextField
               select
               label="Tipo de evento"
@@ -181,6 +205,7 @@ export default function BookingRequestView({
               ))}
             </TextField>
 
+            {/* PAQUETES */}
             <TextField
               select
               label="Paquete fotográfico"
@@ -188,15 +213,23 @@ export default function BookingRequestView({
               onChange={(event) => setPackageId(event.target.value)}
               fullWidth
               required
-              helperText="Elige la cobertura que deseas contratar."
+              disabled={loadingPackages || packages.length === 0}
+              helperText={
+                loadingPackages
+                  ? 'Cargando paquetes...'
+                  : packages.length === 0
+                    ? 'No hay paquetes disponibles actualmente.'
+                    : 'Elige la cobertura que deseas contratar.'
+              }
             >
-              {PACKAGES.map((item) => (
+              {packages.map((item) => (
                 <MenuItem key={item.id} value={item.id}>
-                  {item.name} — {formatPrice(item.price)}
+                  {item.name} — {formatPrice(Number(item.price_cents) / 100)}
                 </MenuItem>
               ))}
             </TextField>
 
+            {/* RESUMEN */}
             <Box
               sx={{
                 p: 3,
@@ -213,21 +246,39 @@ export default function BookingRequestView({
 
               <Stack spacing={1.5} mt={2}>
                 <Stack direction="row" justifyContent="space-between" gap={2}>
-                  <Typography color="text.secondary">Evento</Typography>
+                  <Typography color="text.secondary">
+                    Evento
+                  </Typography>
+
                   <Typography fontWeight={600}>
                     {eventType || 'Por seleccionar'}
                   </Typography>
                 </Stack>
 
                 <Stack direction="row" justifyContent="space-between" gap={2}>
-                  <Typography color="text.secondary">Paquete</Typography>
+                  <Typography color="text.secondary">
+                    Paquete
+                  </Typography>
+
                   <Typography fontWeight={600} textAlign="right">
                     {selectedPackage?.name || 'Por seleccionar'}
                   </Typography>
                 </Stack>
 
+                {selectedPackage?.description && (
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                  >
+                    {selectedPackage.description}
+                  </Typography>
+                )}
+
                 <Stack direction="row" justifyContent="space-between" gap={2}>
-                  <Typography color="text.secondary">Precio total</Typography>
+                  <Typography color="text.secondary">
+                    Precio total
+                  </Typography>
+
                   <Typography fontWeight={600}>
                     {formatPrice(total)}
                   </Typography>
@@ -244,6 +295,7 @@ export default function BookingRequestView({
                       <Typography fontWeight={700} color="#59634B">
                         Anticipo mínimo (50 %)
                       </Typography>
+
                       <Typography variant="caption" color="text.secondary">
                         Para confirmar la fecha
                       </Typography>
@@ -261,16 +313,25 @@ export default function BookingRequestView({
               </Stack>
             </Box>
 
+            {/* ERRORES */}
             {error && (
               <Alert severity="error">
                 {error}
               </Alert>
             )}
 
+            {/* BOTÓN */}
             <Button
               variant="contained"
               size="large"
-              disabled={!eventType || !packageId || !selectedDate || loading}
+              disabled={
+                !eventType ||
+                !packageId ||
+                !selectedDate ||
+                loading ||
+                loadingPackages ||
+                packages.length === 0
+              }
               onClick={handleReservation}
               sx={{
                 py: 1.5,
@@ -280,9 +341,7 @@ export default function BookingRequestView({
             >
               {loading
                 ? 'Registrando reservación...'
-                : session?.token
-                  ? 'Enviar solicitud de reservación'
-                  : 'Iniciar sesión para continuar'}
+                : 'Enviar solicitud de reservación'}
             </Button>
 
             <Typography
@@ -290,10 +349,9 @@ export default function BookingRequestView({
               color="text.secondary"
               textAlign="center"
             >
-              {session?.token
-                ? 'Tu solicitud se registrará como pendiente de anticipo.'
-                : 'Necesitas una cuenta para enviar tu solicitud de reservación.'}
+              Tu solicitud se registrará como pendiente de anticipo.
             </Typography>
+
           </Stack>
         </Paper>
       </Container>

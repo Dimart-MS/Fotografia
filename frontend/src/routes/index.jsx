@@ -17,6 +17,7 @@ import ReservasView from '../views/reservas';
 
 import StudioDialogManager from '../views/modals/StudioDialogManager';
 import useStudio from '../hooks/useStudio';
+import PaquetesView from '../views/paquetes';
 
 export default function AppRoutes() {
     const {
@@ -69,6 +70,7 @@ export default function AppRoutes() {
                     {page === 'inicio' && <DashboardView />}
                     {page === 'clientes' && <ClientesView />}
                     {page === 'reservas' && <ReservasView />}
+                    {page === 'paquetes' && <PaquetesView />}
                 </MainLayout>
 
                 <StudioDialogManager />
