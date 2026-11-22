@@ -87,7 +87,7 @@ const estudioMenu = {
       subtitle: 'Fotografías y videos asociados a eventos.',
       icon: 'camera',
       section: 'CONTENIDO',
-      enabled: false
+      enabled: true
     },
     {
       id: 'entregas',
@@ -98,7 +98,7 @@ const estudioMenu = {
       subtitle: 'Estado y seguimiento de las entregas.',
       icon: 'check',
       section: 'CONTENIDO',
-      enabled: false
+      enabled: true
     },
     {
       id: 'notificaciones',

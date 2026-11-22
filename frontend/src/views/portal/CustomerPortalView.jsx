@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Alert, Avatar, Box, Button, Card, CardContent, Chip, CircularProgress,
+  Alert, Avatar, Box, Button, Card, CardContent, CardMedia, Chip, CircularProgress,
   Dialog, DialogActions, DialogContent, DialogTitle, Divider, Drawer,
   IconButton, LinearProgress, Paper, Stack, TextField, Typography, useMediaQuery
 } from '@mui/material';
@@ -9,6 +9,7 @@ import LogoutConfirmDialog from '../../ui-component/LogoutConfirmDialog';
 import { studioRequest } from '../../api/httpClient';
 import { fetchReservas } from '../../api/reservasService';
 import { updateCliente } from '../../api/clientesService';
+import { fetchGalerias, fetchGaleria, descargarFotografia, descargarVideo } from '../../api/galeriasService';
 
 // ==============================|| PORTAL DEL CLIENTE ||============================== //
 
@@ -82,6 +83,40 @@ function MoneyLine({ label, value, strong = false }) {
   );
 }
 
+
+function normalizeList(value) {
+  if (Array.isArray(value)) return value;
+  if (Array.isArray(value?.galerias)) return value.galerias;
+  if (Array.isArray(value?.items)) return value.items;
+  if (Array.isArray(value?.data)) return value.data;
+  return [];
+}
+
+function getGalleryId(gallery) {
+  return gallery?.id_galeria ?? gallery?.id ?? gallery?.gallery_id;
+}
+
+function getYouTubeEmbedUrl(value) {
+  if (!value) return '';
+  try {
+    const url = new URL(value);
+    let videoId = '';
+    if (url.hostname.includes('youtu.be')) videoId = url.pathname.split('/').filter(Boolean)[0] || '';
+    else if (url.hostname.includes('youtube.com')) {
+      videoId = url.searchParams.get('v') || url.pathname.split('/').filter(Boolean).pop() || '';
+      if (url.pathname.includes('/embed/')) videoId = url.pathname.split('/embed/')[1]?.split('/')[0] || videoId;
+      if (url.pathname.includes('/shorts/')) videoId = url.pathname.split('/shorts/')[1]?.split('/')[0] || videoId;
+    }
+    return videoId ? `https://www.youtube.com/embed/${videoId}` : '';
+  } catch {
+    return '';
+  }
+}
+
+function openExternalFile(url) {
+  if (url) window.open(url, '_blank', 'noopener,noreferrer');
+}
+
 export default function CustomerPortalView({ session, onLogout }) {
   const [activeSection, setActiveSection] = useState('reservas');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -96,6 +131,15 @@ export default function CustomerPortalView({ session, onLogout }) {
   const [profileMessage, setProfileMessage] = useState('');
   const [profileError, setProfileError] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
+  const [galleries, setGalleries] = useState([]);
+  const [galleryLoading, setGalleryLoading] = useState(false);
+  const [galleryError, setGalleryError] = useState('');
+  const [selectedGallery, setSelectedGallery] = useState(null);
+  const [galleryContent, setGalleryContent] = useState(null);
+  const [galleryContentLoading, setGalleryContentLoading] = useState(false);
+  const [galleryContentError, setGalleryContentError] = useState('');
+  const [photoUrls, setPhotoUrls] = useState({});
+  const [videoUrls, setVideoUrls] = useState({});
 
   useEffect(() => {
     let active = true;
@@ -123,6 +167,33 @@ export default function CustomerPortalView({ session, onLogout }) {
     loadCustomerData();
     return () => { active = false; };
   }, [session.token, session.user.client_id]);
+
+
+  useEffect(() => {
+    if (activeSection !== 'galeria') return;
+    let active = true;
+
+    async function loadGalleries() {
+      setGalleryLoading(true);
+      setGalleryError('');
+      try {
+        const response = await fetchGalerias(session.token);
+        if (!active) return;
+        const items = normalizeList(response);
+        setGalleries(items.filter((gallery) => {
+          const published = gallery?.publicada ?? gallery?.published ?? gallery?.is_published;
+          return published === undefined || published === true || published === 1;
+        }));
+      } catch (error) {
+        if (active) setGalleryError(error.message || 'No fue posible cargar tus galerías.');
+      } finally {
+        if (active) setGalleryLoading(false);
+      }
+    }
+
+    loadGalleries();
+    return () => { active = false; };
+  }, [activeSection, session.token]);
 
   const activeReservations = useMemo(() => reservations.filter((r) => !isCancelled(r)), [reservations]);
   const paymentSummary = useMemo(() => activeReservations.reduce((acc, reservation) => ({
@@ -294,8 +365,166 @@ export default function CustomerPortalView({ session, onLogout }) {
     );
   }
 
+
+  async function handleOpenGallery(gallery) {
+    const galleryId = getGalleryId(gallery);
+    if (!galleryId) {
+      setGalleryContentError('No se encontró el identificador de esta galería.');
+      return;
+    }
+
+    setSelectedGallery(gallery);
+    setGalleryContent(null);
+    setPhotoUrls({});
+    setVideoUrls({});
+    setGalleryContentError('');
+    setGalleryContentLoading(true);
+
+    try {
+      const detail = await fetchGaleria(galleryId, session.token);
+      const photos = Array.isArray(detail?.fotografias) ? detail.fotografias : [];
+      const videos = Array.isArray(detail?.videos) ? detail.videos : [];
+      setGalleryContent(detail);
+
+      const photoResults = await Promise.all(photos.map(async (photo) => {
+        const photoId = photo?.id_fotografia ?? photo?.id;
+        if (!photoId) return null;
+        try {
+          const result = await descargarFotografia(galleryId, photoId, session.token);
+          return [photoId, result?.url || ''];
+        } catch {
+          return [photoId, ''];
+        }
+      }));
+
+      const videoResults = await Promise.all(videos.map(async (video) => {
+        const provider = String(video?.proveedor || '').toLowerCase();
+        const videoId = video?.id_video ?? video?.id;
+        if (provider !== 'supabase' || !videoId) return null;
+        try {
+          const result = await descargarVideo(galleryId, videoId, session.token);
+          return [videoId, result?.url || ''];
+        } catch {
+          return [videoId, ''];
+        }
+      }));
+
+      setPhotoUrls(Object.fromEntries(photoResults.filter(Boolean)));
+      setVideoUrls(Object.fromEntries(videoResults.filter(Boolean)));
+    } catch (error) {
+      setGalleryContentError(error.message || 'No fue posible abrir esta galería.');
+    } finally {
+      setGalleryContentLoading(false);
+    }
+  }
+
   function renderGallery() {
-    return <EmptySection icon="image" title="Tu galería estará aquí" description="Cuando el estudio publique las fotografías y los videos de tu evento, podrás consultarlos desde este espacio. Por ahora no hay contenido disponible en el portal." />;
+    if (galleryLoading) {
+      return <Box sx={{ py: 5, textAlign: 'center' }}><CircularProgress sx={{ color: '#68745B' }} /><Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>Buscando tus galerías...</Typography></Box>;
+    }
+
+    if (galleryError) return <Alert severity="error" sx={{ mt: 3 }}>{galleryError}</Alert>;
+
+    if (selectedGallery) {
+      const photos = Array.isArray(galleryContent?.fotografias) ? galleryContent.fotografias : [];
+      const videos = Array.isArray(galleryContent?.videos) ? galleryContent.videos : [];
+      const galleryTitle = selectedGallery.titulo || selectedGallery.nombre || 'Mi galería';
+
+      return (
+        <Box sx={{ mt: 3 }}>
+          <Button onClick={() => { setSelectedGallery(null); setGalleryContent(null); setGalleryContentError(''); }} startIcon={<Icon name="arrow-left" />} sx={{ color: '#526047', textTransform: 'none', mb: 2 }}>
+            Volver a mis galerías
+          </Button>
+          <Typography variant="h6" sx={{ fontFamily: 'Georgia, serif', color: '#343B32' }}>{galleryTitle}</Typography>
+          {(selectedGallery.descripcion || selectedGallery.description) && <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75, mb: 2 }}>{selectedGallery.descripcion || selectedGallery.description}</Typography>}
+          {galleryContentError && <Alert severity="warning" sx={{ mt: 2 }}>{galleryContentError}</Alert>}
+          {galleryContentLoading && <LinearProgress sx={{ mt: 2, '& .MuiLinearProgress-bar': { bgcolor: '#68745B' } }} />}
+          {!galleryContentLoading && galleryContent && (
+            <>
+              <Divider sx={{ my: 3 }} />
+              <Typography variant="h6" sx={{ fontFamily: 'Georgia, serif', color: '#343B32', mb: 2 }}>Fotografías</Typography>
+              {photos.length === 0 ? (
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>Todavía no hay fotografías en esta galería.</Typography>
+              ) : (
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(3, minmax(0, 1fr))', lg: 'repeat(4, minmax(0, 1fr))' }, gap: 2 }}>
+                  {photos.map((photo, index) => {
+                    const id = photo.id_fotografia ?? photo.id ?? index;
+                    const url = photoUrls[id];
+                    return (
+                      <Card key={id} elevation={0} sx={{ border: '1px solid #E2E5DD', borderRadius: 2, overflow: 'hidden' }}>
+                        {url ? <CardMedia component="img" image={url} alt={photo.nombre_archivo || `Fotografía ${index + 1}`} sx={{ aspectRatio: '1 / 1', objectFit: 'cover' }} /> : (
+                          <Box sx={{ aspectRatio: '1 / 1', display: 'grid', placeItems: 'center', bgcolor: '#F1F4EE', color: '#68745B' }}><Icon name="image" size={30} /></Box>
+                        )}
+                        <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+                          <Typography variant="caption" noWrap display="block" sx={{ mb: 1 }}>{photo.nombre_archivo || `Fotografía ${index + 1}`}</Typography>
+                          <Button size="small" fullWidth variant="outlined" disabled={!url} onClick={() => openExternalFile(url)} sx={{ textTransform: 'none', borderColor: '#AAB8A1', color: '#526047' }}>
+                            Ver / descargar
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </Box>
+              )}
+
+              <Divider sx={{ my: 3 }} />
+              <Typography variant="h6" sx={{ fontFamily: 'Georgia, serif', color: '#343B32', mb: 2 }}>Videos</Typography>
+              {videos.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">Todavía no hay videos en esta galería.</Typography>
+              ) : (
+                <Stack spacing={2}>
+                  {videos.map((video, index) => {
+                    const id = video.id_video ?? video.id ?? index;
+                    const provider = String(video.proveedor || '').toLowerCase();
+                    const externalUrl = video.url_externa || video.url || '';
+                    const youtubeUrl = provider.includes('youtube') ? getYouTubeEmbedUrl(externalUrl) : '';
+                    const playableUrl = provider === 'supabase' ? videoUrls[id] : externalUrl;
+                    return (
+                      <Paper key={id} elevation={0} sx={{ p: 2, border: '1px solid #E2E5DD', borderRadius: 2 }}>
+                        <Typography fontWeight={700} sx={{ color: '#343B32', mb: 1.5 }}>{video.titulo || `Video ${index + 1}`}</Typography>
+                        {youtubeUrl ? (
+                          <Box sx={{ position: 'relative', width: '100%', aspectRatio: '16 / 9', bgcolor: '#111', borderRadius: 2, overflow: 'hidden' }}>
+                            <Box component="iframe" src={youtubeUrl} title={video.titulo || 'Video de YouTube'} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0 }} />
+                          </Box>
+                        ) : provider === 'supabase' && playableUrl ? (
+                          <Box component="video" src={playableUrl} controls preload="metadata" sx={{ width: '100%', maxHeight: 420, borderRadius: 2, bgcolor: '#111' }} />
+                        ) : externalUrl ? (
+                          <Button component="a" href={externalUrl} target="_blank" rel="noopener noreferrer" variant="outlined" sx={{ textTransform: 'none', color: '#526047', borderColor: '#AAB8A1' }}>Abrir video</Button>
+                        ) : (
+                          <Typography variant="body2" color="text.secondary">El video no tiene una dirección disponible.</Typography>
+                        )}
+                      </Paper>
+                    );
+                  })}
+                </Stack>
+              )}
+            </>
+          )}
+        </Box>
+      );
+    }
+
+    if (!galleries.length) {
+      return <EmptySection icon="image" title="Aún no tienes galerías disponibles" description="Cuando el estudio publique una galería asociada a tus reservaciones, aparecerá aquí para que puedas ver y descargar tus recuerdos." />;
+    }
+
+    return (
+      <Box sx={{ mt: 3, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(3, minmax(0, 1fr))' }, gap: 2 }}>
+        {galleries.map((gallery, index) => {
+          const id = getGalleryId(gallery) ?? index;
+          return (
+            <Card key={id} elevation={0} sx={{ border: '1px solid #E2E5DD', borderRadius: 3, overflow: 'hidden' }}>
+              <Box sx={{ height: 110, bgcolor: '#EEF0E9', display: 'grid', placeItems: 'center', color: '#68745B' }}><Icon name="image" size={38} /></Box>
+              <CardContent>
+                <Typography variant="h6" sx={{ fontFamily: 'Georgia, serif', color: '#343B32' }}>{gallery.titulo || gallery.nombre || `Galería ${index + 1}`}</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1, minHeight: 40 }}>{gallery.descripcion || gallery.description || 'Tus fotografías y videos de este evento.'}</Typography>
+                <Button fullWidth variant="contained" onClick={() => handleOpenGallery(gallery)} sx={{ mt: 2, bgcolor: '#68745B', textTransform: 'none', '&:hover': { bgcolor: '#526047' } }}>Ver galería</Button>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </Box>
+    );
   }
 
   function renderProfile() {

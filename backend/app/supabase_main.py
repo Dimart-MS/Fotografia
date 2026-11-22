@@ -39,6 +39,12 @@ from app.infrastructure.supabase_reservas_repository import (
 
 from app.core.security import require_user
 
+from app.api.routes.galerias import create_galerias_router
+from app.infrastructure.supabase_galerias_repository import (
+    SupabaseGaleriasRepository,
+)
+from app.infrastructure.supabase_storage import SupabaseStorage
+
 
 # ==============================
 # CICLO DE VIDA DE LA APLICACIÓN
@@ -79,6 +85,18 @@ async def lifespan(app: FastAPI):
             tablas["paquetes"],
             tablas["pagos"],
         )
+
+        app.state.galerias_repo = SupabaseGaleriasRepository(
+            engine,
+            tablas["galerias"],
+            tablas["fotografias"],
+            tablas["videos"],
+            tablas["entregas"],
+            tablas["historial_entregas"],
+            tablas["reservaciones"],
+        )
+
+        app.state.storage = SupabaseStorage()
 
         yield
 
@@ -184,6 +202,13 @@ app.include_router(
 
 app.include_router(
     create_reservas_router(usuario_autenticado)
+)
+
+app.include_router(
+    create_galerias_router(
+        usuario_autenticado,
+        solo_administrador,
+    )
 )
 
 # ==============================
