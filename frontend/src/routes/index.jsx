@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+﻿import { useState } from 'react';
 
 import MainLayout from '../layout/MainLayout';
 import LoginView from '../views/auth/LoginView';
@@ -42,13 +41,11 @@ export default function AppRoutes() {
         setPublicView('availability');
     };
 
-    // Abrir un único login
     const openLogin = (returnView = 'home') => {
         setLoginReturnView(returnView);
         setPublicView('login');
     };
 
-    // Redirección automática según el rol
     const handleLoginSuccess = async (session) => {
         const role = session.user.role;
 
@@ -61,7 +58,7 @@ export default function AppRoutes() {
         if (role === 'Cliente') {
             setCustomerSession(session);
 
-            // Primer inicio de sesión con contraseña temporal
+            // Primer inicio de sesiÃ³n con contraseÃ±a temporal.
             if (session.user.must_change_password) {
                 setPublicView('change-password');
                 return;
@@ -79,7 +76,6 @@ export default function AppRoutes() {
         throw new Error('El rol no tiene un panel disponible.');
     };
 
-    // Panel administrativo
     if (accessKey) {
         return (
             <>
@@ -99,7 +95,6 @@ export default function AppRoutes() {
         );
     }
 
-    // Cambio obligatorio de contraseña temporal
     if (
         customerSession?.user?.role === 'Cliente' &&
         customerSession.user.must_change_password
@@ -127,7 +122,6 @@ export default function AppRoutes() {
         );
     }
 
-    // Portal de cliente
     if (
         publicView === 'customer-portal' &&
         customerSession?.user?.role === 'Cliente'
@@ -144,7 +138,6 @@ export default function AppRoutes() {
         );
     }
 
-    // Login unificado
     if (publicView === 'login') {
         return (
             <LoginView
@@ -158,7 +151,6 @@ export default function AppRoutes() {
         );
     }
 
-    // Registro de clientes
     if (publicView === 'register') {
         return (
             <RegisterView
@@ -168,7 +160,6 @@ export default function AppRoutes() {
         );
     }
 
-    // Solicitud de reservación
     if (publicView === 'booking-request') {
         return (
             <BookingRequestView
@@ -183,7 +174,6 @@ export default function AppRoutes() {
         );
     }
 
-    // Calendario público
     if (publicView === 'availability') {
         return (
             <AvailabilityView
@@ -202,7 +192,6 @@ export default function AppRoutes() {
         );
     }
 
-    // Página principal pública
     return (
         <HomeView
             onLogin={() => openLogin('home')}

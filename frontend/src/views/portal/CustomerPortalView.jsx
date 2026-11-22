@@ -9,13 +9,13 @@ import LogoutConfirmDialog from '../../ui-component/LogoutConfirmDialog';
 import { studioRequest } from '../../api/httpClient';
 import { fetchReservas } from '../../api/reservasService';
 import { updateCliente } from '../../api/clientesService';
-
-import { fetchGalerias, fetchGaleria, descargarFotografia, descargarVideo } from '../../api/galeriasService';
 import {
   fetchMisComprobantes,
   fetchMisPagos,
   presentarComprobante
 } from '../../api/pagosService';
+
+import { fetchGalerias, fetchGaleria, descargarFotografia, descargarVideo } from '../../api/galeriasService';
 // ==============================|| PORTAL DEL CLIENTE ||============================== //
 
 const SECTIONS = [
@@ -139,19 +139,6 @@ export default function CustomerPortalView({
   const [profileMessage, setProfileMessage] = useState('');
   const [profileError, setProfileError] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
-
-    // Estados de galerías
-  const [galleries, setGalleries] = useState([]);
-  const [galleryLoading, setGalleryLoading] = useState(false);
-  const [galleryError, setGalleryError] = useState('');
-  const [selectedGallery, setSelectedGallery] = useState(null);
-  const [galleryContent, setGalleryContent] = useState(null);
-  const [galleryContentLoading, setGalleryContentLoading] = useState(false);
-  const [galleryContentError, setGalleryContentError] = useState('');
-  const [photoUrls, setPhotoUrls] = useState({});
-  const [videoUrls, setVideoUrls] = useState({});
-
-  // Estados de pagos y comprobantes
   const [customerPayments, setCustomerPayments] = useState([]);
   const [customerProofs, setCustomerProofs] = useState([]);
   const [paymentError, setPaymentError] = useState('');
@@ -161,7 +148,6 @@ export default function CustomerPortalView({
   const [uploadingProof, setUploadingProof] = useState(false);
   const [proofPreview, setProofPreview] = useState(null);
 
-  // Vista previa del comprobante
   useEffect(() => {
     if (!proofFile || !['image/jpeg', 'image/png'].includes(proofFile.type)) {
       setProofPreview(null);
@@ -175,6 +161,18 @@ export default function CustomerPortalView({
       URL.revokeObjectURL(previewUrl);
     };
   }, [proofFile]);
+
+    // Estados de galerías
+  const [galleries, setGalleries] = useState([]);
+  const [galleryLoading, setGalleryLoading] = useState(false);
+  const [galleryError, setGalleryError] = useState('');
+  const [selectedGallery, setSelectedGallery] = useState(null);
+  const [galleryContent, setGalleryContent] = useState(null);
+  const [galleryContentLoading, setGalleryContentLoading] = useState(false);
+  const [galleryContentError, setGalleryContentError] = useState('');
+  const [photoUrls, setPhotoUrls] = useState({});
+  const [videoUrls, setVideoUrls] = useState({});
+
   useEffect(() => {
     let active = true;
     async function loadCustomerData() {
