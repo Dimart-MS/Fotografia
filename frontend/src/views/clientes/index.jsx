@@ -1,6 +1,5 @@
-
 import { useState } from 'react';
-
+import CloseIcon from '@mui/icons-material/Close';
 import {
   Avatar,
   Box,
@@ -101,6 +100,37 @@ export default function ClientesView() {
   const handleBooking = (clientId) => {
     closeDetails();
     openBookingModal(getLocalToday(), clientId);
+  };
+
+  const primaryButtonSx = {
+    bgcolor: '#68745B',
+    color: '#FFFFFF',
+    borderRadius: 2.5,
+    minHeight: 42,
+    px: 2.5,
+    fontWeight: 600,
+    textTransform: 'none',
+    boxShadow: 'none',
+    whiteSpace: 'nowrap',
+    '&:hover': {
+      bgcolor: '#526047',
+      boxShadow: '0 4px 12px rgba(82, 96, 71, 0.18)'
+    }
+  };
+
+  const secondaryButtonSx = {
+    color: '#526047',
+    borderColor: '#B7C4AD',
+    borderRadius: 2.5,
+    minHeight: 42,
+    px: 2.5,
+    fontWeight: 600,
+    textTransform: 'none',
+    whiteSpace: 'nowrap',
+    '&:hover': {
+      borderColor: '#68745B',
+      bgcolor: '#F1F4EE'
+    }
   };
 
   return (
@@ -229,26 +259,76 @@ export default function ClientesView() {
             spacing={1.5}
             alignItems={{ xs: 'stretch', sm: 'center' }}
           >
-            <TextField
-              size="small"
-              placeholder="Buscar cliente..."
-              label="Nombre, correo o teléfono"
-              value={search || ''}
-              onChange={(event) => setSearch(event.target.value)}
+            <Box
               sx={{
-                minWidth: { sm: 280 },
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 2
+                display: 'flex',
+                alignItems: 'center',
+                width: { xs: '100%', sm: 300 },
+                height: 44,
+                px: 1.5,
+                gap: 1.5,
+                border: '1px solid #DDE5D7',
+                borderRadius: '12px',
+                bgcolor: '#FFFFFF',
+                boxSizing: 'border-box',
+                transition: 'border-color 0.2s',
+                '&:hover': {
+                  borderColor: '#9AAA8D'
+                },
+                '&:focus-within': {
+                  borderColor: '#68745B'
                 }
               }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Icon name="search" size={18} />
-                  </InputAdornment>
-                )
-              }}
-            />
+            >
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: '#68745B',
+                  flexShrink: 0
+                }}
+              >
+                <Icon name="search" size={18} />
+              </Box>
+
+              <Box
+                component="input"
+                type="search"
+                aria-label="Buscar clientes"
+                placeholder="Buscar cliente..."
+                value={search || ''}
+                onChange={(event) => setSearch(event.target.value)}
+                sx={{
+                  flex: 1,
+                  minWidth: 0,
+                  width: '100%',
+                  border: 'none',
+                  outline: 'none',
+                  bgcolor: 'transparent',
+                  color: '#343B32',
+                  fontSize: '14px',
+                  fontFamily: 'inherit',
+                  '&::placeholder': {
+                    color: '#92998E',
+                    opacity: 1
+                  }
+                }}
+              />
+
+              {search && (
+                <IconButton
+                  size="small"
+                  aria-label="Limpiar búsqueda"
+                  onClick={() => setSearch('')}
+                  sx={{
+                    color: '#68745B',
+                    p: 0.3
+                  }}
+                >
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              )}
+            </Box>
 
             <Button
               variant="contained"
@@ -269,19 +349,36 @@ export default function ClientesView() {
               size="small"
               onChange={handleViewChange}
               aria-label="Tipo de visualización"
-              sx={{ alignSelf: 'flex-start' }}
+              sx={{
+                alignSelf: { xs: 'stretch', sm: 'center' },
+                bgcolor: '#F1F4EE',
+                borderRadius: 2.5,
+                p: 0.4,
+                gap: 0.5,
+                '& .MuiToggleButtonGroup-grouped': {
+                  border: 0,
+                  borderRadius: '8px !important',
+                  px: 2,
+                  py: 0.9,
+                  color: '#68745B',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  '&.Mui-selected': {
+                    bgcolor: '#FFFFFF',
+                    color: '#354337',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
+                    '&:hover': {
+                      bgcolor: '#FFFFFF'
+                    }
+                  }
+                }
+              }}
             >
-              <ToggleButton
-                value="cards"
-                aria-label="Vista de tarjetas"
-              >
+              <ToggleButton value="cards" aria-label="Vista de tarjetas">
                 Tarjetas
               </ToggleButton>
 
-              <ToggleButton
-                value="table"
-                aria-label="Vista de tabla"
-              >
+              <ToggleButton value="table" aria-label="Vista de tabla">
                 Tabla
               </ToggleButton>
             </ToggleButtonGroup>
@@ -442,10 +539,7 @@ export default function ClientesView() {
                     variant="outlined"
                     fullWidth
                     onClick={() => setSelectedClient(client)}
-                    sx={{
-                      color: '#526047',
-                      borderColor: '#AAB8A1'
-                    }}
+                    sx={secondaryButtonSx}
                   >
                     Ver perfil
                   </Button>
@@ -609,8 +703,16 @@ export default function ClientesView() {
               <IconButton
                 onClick={closeDetails}
                 aria-label="Cerrar perfil"
+                sx={{
+                  color: '#526047',
+                  bgcolor: '#F1F4EE',
+                  border: '1px solid #E2E5DD',
+                  '&:hover': {
+                    bgcolor: '#E2E9DB'
+                  }
+                }}
               >
-                <Icon name="x" />
+                <CloseIcon fontSize="small" />
               </IconButton>
             </DialogTitle>
 

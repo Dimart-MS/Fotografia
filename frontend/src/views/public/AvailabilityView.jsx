@@ -1,5 +1,5 @@
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
     Alert,
     Box,
@@ -9,6 +9,8 @@ import {
     Stack,
     Typography
 } from '@mui/material';
+
+import { fetchFechasOcupadas } from '../../api/reservasService';
 
 const WEEKDAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
@@ -33,6 +35,52 @@ export default function AvailabilityView({ onBack, onContinue }) {
         new Date(today.getFullYear(), today.getMonth(), 1)
     );
     const [selectedDate, setSelectedDate] = useState('');
+    const [occupiedDates, setOccupiedDates] = useState([]);
+    const [loadingAvailability, setLoadingAvailability] = useState(true);
+    const [availabilityError, setAvailabilityError] = useState('');
+
+    useEffect(() => {
+        let active = true;
+
+        const loadAvailability = async () => {
+            setLoadingAvailability(true);
+            setAvailabilityError('');
+            setOccupiedDates([]);
+            setSelectedDate('');
+
+            try {
+                const anio = currentMonth.getFullYear();
+                const mes = currentMonth.getMonth() + 1;
+
+                const response = await fetchFechasOcupadas(anio, mes);
+
+                if (!active) return;
+
+                if (!Array.isArray(response?.fechas_ocupadas)) {
+                    throw new Error('La respuesta de disponibilidad no es válida.');
+                }
+
+                setOccupiedDates(response.fechas_ocupadas);
+            } catch (error) {
+                if (!active) return;
+
+                console.error('Error al consultar disponibilidad:', error);
+                setAvailabilityError(
+                    'No pudimos consultar las fechas disponibles. Intenta nuevamente.'
+                );
+            } finally {
+                if (active) {
+                    setLoadingAvailability(false);
+                }
+            }
+        };
+
+        loadAvailability();
+
+        return () => {
+            active = false;
+        };
+    }, [currentMonth]);
 
     const calendarDays = useMemo(() => {
         const year = currentMonth.getFullYear();
@@ -191,13 +239,26 @@ export default function AvailabilityView({ onBack, onContinue }) {
                             }
 
                             const key = dateKey(date);
-                            const disabled = isPastDate(date);
+                            const occupied = occupiedDates.includes(key);
+                            const disabled =
+                                isPastDate(date) ||
+                                occupied ||
+                                loadingAvailability ||
+                                Boolean(availabilityError);
+
                             const selected = selectedDate === key;
 
                             return (
                                 <Button
                                     key={key}
                                     disabled={disabled}
+                                    title={
+                                        occupied
+                                            ? 'Fecha ocupada'
+                                            : isPastDate(date)
+                                                ? 'Fecha anterior'
+                                                : 'Seleccionar fecha'
+                                    }
                                     onClick={() => setSelectedDate(key)}
                                     sx={{
                                         minWidth: 0,
@@ -214,7 +275,12 @@ export default function AvailabilityView({ onBack, onContinue }) {
                                             bgcolor: selected ? '#59634B' : '#EEF0E9'
                                         },
                                         '&.Mui-disabled': {
-                                            color: '#D0D0CB'
+                                            color: occupied ? '#A33A3A' : '#D0D0CB',
+                                            bgcolor: occupied ? '#FCE8E8' : 'transparent',
+                                            border: occupied
+                                                ? '1px solid #E6A5A5'
+                                                : '1px solid transparent',
+                                            opacity: 1
                                         }
                                     }}
                                 >
@@ -224,10 +290,38 @@ export default function AvailabilityView({ onBack, onContinue }) {
                         })}
                     </Box>
 
-                    <Alert severity="info" sx={{ mt: 3 }}>
-                        La disponibilidad real se mostrará cuando conectemos este
-                        calendario con el servicio de reservas del estudio.
-                    </Alert>
+                    <Box sx={{ mt: 3 }}>
+                        {loadingAvailability && (
+                            <Alert severity="info">
+                                Consultando disponibilidad de fechas...
+                            </Alert>
+                        )}
+
+                        {availabilityError && (
+                            <Alert severity="error">
+                                {availabilityError}
+                            </Alert>
+                        )}
+
+                        {!loadingAvailability && !availabilityError && (
+                            <Stack spacing={1.5}>
+                                <Stack direction="row" spacing={2} flexWrap="wrap">
+                                    <Typography variant="body2" sx={{ color: '#68745B' }}>
+                                        ● Disponible
+                                    </Typography>
+
+                                    <Typography variant="body2" sx={{ color: '#A33A3A' }}>
+                                        ● Ocupado
+                                    </Typography>
+                                </Stack>
+
+                                <Alert severity="success">
+                                    Disponibilidad actualizada. Los días marcados en rojo
+                                    ya están ocupados y no pueden seleccionarse.
+                                </Alert>
+                            </Stack>
+                        )}
+                    </Box>
 
                     {selectedDate && (
                         <Box
@@ -254,7 +348,20 @@ export default function AvailabilityView({ onBack, onContinue }) {
                                     bgcolor: '#68745B',
                                     '&:hover': { bgcolor: '#59634B' }
                                 }}
-                                onClick={() => onContinue(selectedDate)}
+                                disabled={
+                                    loadingAvailability ||
+                                    Boolean(availabilityError) ||
+                                    occupiedDates.includes(selectedDate)
+                                }
+                                onClick={() => {
+                                    if (
+                                        !loadingAvailability &&
+                                        !availabilityError &&
+                                        !occupiedDates.includes(selectedDate)
+                                    ) {
+                                        onContinue(selectedDate);
+                                    }
+                                }}
                             >
                                 Continuar con esta fecha
                             </Button>

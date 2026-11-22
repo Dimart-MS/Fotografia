@@ -1,6 +1,13 @@
-
-import { Box, Button, Chip, MenuItem, Stack, TextField, Typography } from '@mui/material';
-
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  MenuItem,
+  Stack,
+  TextField,
+  Typography
+} from '@mui/material';
 import BookingsTable from '../../ui-component/tables/BookingsTable';
 
 import {
@@ -30,7 +37,8 @@ export default function ReservasView() {
     openBookingModal,
     openBookingDetailsModal,
     openConfirmPaymentModal,
-    openCancelBookingModal
+    openCancelBookingModal,
+    openExtensionModal
   } = useStudio();
 
 
@@ -74,6 +82,16 @@ export default function ReservasView() {
     (booking) => booking.status === 'Pendiente de anticipo'
   ).length;
 
+  const proofSentCount = bookings.filter(
+    (booking) => booking.status === 'Comprobante enviado'
+  ).length;
+
+  const pendingDecisionCount = bookings.filter(
+    (booking) =>
+      booking.status === 'Pendiente de anticipo' &&
+      booking.decision_anticipo_pendiente === true
+  ).length;
+
   const cancelledCount = bookings.filter(
     (booking) => booking.status === 'Cancelada'
   ).length;
@@ -88,6 +106,18 @@ export default function ReservasView() {
 
   return (
     <Box sx={{ pb: 3 }}>
+      {pendingDecisionCount > 0 && (
+        <Alert severity="warning" sx={{ mb: 3, borderRadius: 2 }}>
+          Hay {pendingDecisionCount}{' '}
+          {pendingDecisionCount === 1
+            ? 'reservación que requiere'
+            : 'reservaciones que requieren'}{' '}
+          una decisión administrativa sobre el anticipo.
+
+          Revisa las solicitudes pendientes para conceder
+          una prórroga o cancelar la reservación.
+        </Alert>
+      )}
 
       {/* RESUMEN DE RESERVACIONES */}
       <Box
@@ -95,7 +125,8 @@ export default function ReservasView() {
           display: 'grid',
           gridTemplateColumns: {
             xs: 'repeat(2, minmax(0, 1fr))',
-            md: 'repeat(4, minmax(0, 1fr))'
+            md: 'repeat(3, minmax(0, 1fr))',
+            xl: 'repeat(6, minmax(0, 1fr))'
           },
           gap: 2,
           mb: 3
@@ -105,6 +136,8 @@ export default function ReservasView() {
           { label: 'Total de reservas', value: bookings.length },
           { label: 'Confirmadas', value: confirmedCount },
           { label: 'Pendientes de anticipo', value: pendingCount },
+          { label: 'Comprobantes por revisar', value: proofSentCount },
+          { label: 'Decisiones pendientes', value: pendingDecisionCount },
           { label: 'Canceladas', value: cancelledCount }
         ].map((stat) => (
           <Box
@@ -128,7 +161,7 @@ export default function ReservasView() {
               variant="h4"
               sx={{
                 fontFamily: 'Georgia, serif',
-                color: '#254C41'
+                color: '#68745B'
               }}
             >
               {stat.value}
@@ -225,12 +258,18 @@ export default function ReservasView() {
               );
 
               const isOccupied = dayEvents.some(
-                (booking) => booking.status === 'Confirmada'
+                (booking) =>
+                  ['Confirmada', 'Realizada', 'Entregada'].includes(
+                    booking.status
+                  )
               );
 
               const dayPendingCount = dayEvents.filter(
-                (booking) =>
-                  booking.status === 'Pendiente de anticipo'
+                (booking) => booking.status === 'Pendiente de anticipo'
+              ).length;
+
+              const dayProofCount = dayEvents.filter(
+                (booking) => booking.status === 'Comprobante enviado'
               ).length;
 
               const isToday = dateStr === todayStr;
@@ -256,17 +295,25 @@ export default function ReservasView() {
                           : 'Crear reservación'
                   }
                   aria-label={`${formatPrettyDate(dateStr)}${isOccupied
-                    ? ', ocupado'
-                    : dayPendingCount > 0
-                      ? `, disponible con ${dayPendingCount} solicitud(es) pendiente(s)`
-                      : ', disponible'
+                      ? ', ocupado'
+                      : dayProofCount > 0 || dayPendingCount > 0
+                        ? `, disponible con ${dayProofCount} comprobante(s) por revisar y ${dayPendingCount} solicitud(es) pendiente(s)`
+                        : ', disponible'
                     }`}
                   onClick={() => openBookingModal(dateStr)}
                 >
                   <span>{dayNumber}</span>
 
                   {isOccupied ? (
-                    <small>Confirmada</small>
+                    <small>Ocupada</small>
+                  ) : dayProofCount > 0 ? (
+                    <small>
+                      {dayProofCount} comprobante
+                      {dayProofCount !== 1 ? 's' : ''}
+                      {dayPendingCount > 0
+                        ? ` · ${dayPendingCount} pendiente${dayPendingCount !== 1 ? 's' : ''}`
+                        : ''}
+                    </small>
                   ) : dayPendingCount > 0 ? (
                     <small>
                       {dayPendingCount} pendiente
@@ -312,6 +359,15 @@ export default function ReservasView() {
             size="small"
             variant="outlined"
           />
+
+          <Chip
+            label="Comprobante enviado"
+            size="small"
+            sx={{
+              bgcolor: '#E8EFF4',
+              color: '#456A85'
+            }}
+          />
         </Box>
 
         <Typography
@@ -319,7 +375,9 @@ export default function ReservasView() {
           color="text.secondary"
           sx={{ display: 'block', px: 3, pt: 1 }}
         >
-          Solo los eventos confirmados bloquean la fecha.
+          La disponibilidad definitiva se valida al registrar la reservación.
+          Las solicitudes pendientes y los comprobantes enviados se muestran
+          para facilitar el seguimiento administrativo.
         </Typography>
       </section>
 
@@ -392,6 +450,7 @@ export default function ReservasView() {
           onOpenBookingDetails={openBookingDetailsModal}
           onOpenConfirmPayment={openConfirmPaymentModal}
           onOpenCancelBooking={openCancelBookingModal}
+          onOpenExtension={openExtensionModal}
           onCreateBooking={openBookingModal}
           onCreateClient={openClientModal}
         />

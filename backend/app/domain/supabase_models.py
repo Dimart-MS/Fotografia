@@ -33,6 +33,7 @@ TABLAS_SUPABASE = (
     "usuarios",
     "ventas",
     "videos",
+    "historial_prorrogas_anticipo",
 )
 
 

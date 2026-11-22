@@ -27,3 +27,22 @@ export async function getCurrentUser(token) {
         token
     );
 }
+
+// Cambiar la contraseña del usuario autenticado.
+export async function changePassword(
+    token,
+    currentPassword,
+    newPassword
+) {
+    return studioRequest(
+        '/api/auth/change-password',
+        {
+            method: 'POST',
+            body: JSON.stringify({
+                current_password: currentPassword,
+                new_password: newPassword
+            })
+        },
+        token
+    );
+}

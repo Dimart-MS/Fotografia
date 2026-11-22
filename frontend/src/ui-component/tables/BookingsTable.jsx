@@ -35,15 +35,13 @@ export default function BookingsTable({
   onOpenBookingDetails,
   onOpenConfirmPayment,
   onOpenCancelBooking,
+  onOpenExtension,
   onCreateBooking,
   onCreateClient
 }) {
   // Estado del menú de acciones
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuBooking, setMenuBooking] = useState(null);
-
-  // Estado independiente para el diálogo de detalles
-  const [selectedBooking, setSelectedBooking] = useState(null);
 
   // Abrir menú de acciones
   const handleOpenMenu = (event, booking) => {
@@ -60,16 +58,13 @@ export default function BookingsTable({
   // Abrir detalles
   const handleViewDetails = () => {
     const booking = menuBooking;
-
     handleCloseMenu();
-    setSelectedBooking(booking);
-
     if (booking && onOpenBookingDetails) {
       onOpenBookingDetails(booking);
     }
   };
 
-  // Confirmar anticipo
+  // Registrar anticipo o abono en efectivo
   const handleConfirm = () => {
     const booking = menuBooking;
 
@@ -91,10 +86,16 @@ export default function BookingsTable({
     }
   };
 
-  // Cerrar diálogo de detalles
-  const closeDetails = () => {
-    setSelectedBooking(null);
+  const handleExtension = () => {
+    const booking = menuBooking;
+
+    handleCloseMenu();
+
+    if (booking && onOpenExtension) {
+      onOpenExtension(booking);
+    }
   };
+
 
   // ==============================|| SIN RESERVACIONES ||============================== //
 
@@ -119,17 +120,6 @@ export default function BookingsTable({
     );
   }
 
-  // Paquete de la reservación seleccionada
-  const selectedPackage = selectedBooking
-    ? packages.find(
-        (pkg) => String(pkg.id) === String(selectedBooking.package)
-      )
-    : null;
-
-  // Información de pagos
-  const total = Number(selectedBooking?.total_cents || 0);
-  const paid = Number(selectedBooking?.paid_cents || 0);
-  const pending = Math.max(total - paid, 0);
 
   // ==============================|| TABLA DE RESERVACIONES ||============================== //
 
@@ -168,6 +158,17 @@ export default function BookingsTable({
                 <tr key={booking.id}>
                   {/* CLIENTE Y EVENTO */}
                   <td>
+                    <small
+                      style={{
+                        display: 'block',
+                        color: '#526047',
+                        fontWeight: 600,
+                        marginBottom: '4px'
+                      }}
+                    >
+                      Reservación #{booking.id}
+                    </small>
+
                     <strong>
                       {booking.client_name || 'Sin cliente'}
                     </strong>
@@ -228,7 +229,7 @@ export default function BookingsTable({
                         aria-haspopup="menu"
                         aria-expanded={
                           Boolean(anchorEl) &&
-                          menuBooking?.id === booking.id
+                            menuBooking?.id === booking.id
                             ? 'true'
                             : undefined
                         }
@@ -298,206 +299,55 @@ export default function BookingsTable({
           Ver detalles
         </MenuItem>
 
-        {menuBooking?.status === 'Pendiente de anticipo' && (
-          <>
+        {/* PAGOS EN EFECTIVO: ANTICIPOS Y ABONOS */}
+
+        {menuBooking &&
+          ['Pendiente de anticipo', 'Confirmada'].includes(
+            menuBooking.status
+          ) &&
+          !(
+            menuBooking.status === 'Pendiente de anticipo' &&
+            menuBooking.decision_anticipo_pendiente
+          ) &&
+          Math.max(
+            (Number(menuBooking.total_cents) || 0) -
+            (Number(menuBooking.paid_cents) || 0),
+            0
+          ) > 0 && (
             <MenuItem
               onClick={handleConfirm}
               disabled={!onOpenConfirmPayment}
-              sx={{
-                color: '#254C41',
-                fontSize: 13,
-                py: 1.3
-              }}
+              sx={{ color: '#254C41', fontSize: 13, py: 1.3 }}
             >
-              Confirmar anticipo
+              Registrar pago en efectivo
             </MenuItem>
+          )}
 
+        {/* PRÓRROGA: SOLO CUANDO EXISTE UNA DECISIÓN PENDIENTE */}
+
+        {menuBooking?.status === 'Pendiente de anticipo' &&
+          menuBooking.decision_anticipo_pendiente && (
             <MenuItem
-              onClick={handleCancel}
-              disabled={!onOpenCancelBooking}
-              sx={{
-                color: '#A34D4D',
-                fontSize: 13,
-                py: 1.3
-              }}
+              onClick={handleExtension}
+              disabled={!onOpenExtension}
+              sx={{ color: '#526047', fontSize: 13, py: 1.3 }}
             >
-              Cancelar reserva
+              Conceder prórroga
             </MenuItem>
-          </>
+          )}
+
+        {/* CANCELACIÓN: CONSERVAR LA REGLA ORIGINAL */}
+
+        {menuBooking?.status === 'Pendiente de anticipo' && (
+          <MenuItem
+            onClick={handleCancel}
+            disabled={!onOpenCancelBooking}
+            sx={{ color: '#A34D4D', fontSize: 13, py: 1.3 }}
+          >
+            Cancelar solicitud
+          </MenuItem>
         )}
       </Menu>
-
-      {/* ==============================|| DETALLE DE RESERVACIÓN ||============================== */}
-
-      <Dialog
-        open={Boolean(selectedBooking)}
-        onClose={closeDetails}
-        fullWidth
-        maxWidth="sm"
-        PaperProps={{
-          sx: {
-            borderRadius: 4,
-            bgcolor: '#FFFFFF'
-          }
-        }}
-      >
-        {selectedBooking && (
-          <>
-            <DialogTitle
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                fontFamily: 'Georgia, serif',
-                color: '#343B32'
-              }}
-            >
-              Detalle de reservación
-
-              <IconButton
-                onClick={closeDetails}
-                aria-label="Cerrar detalle"
-              >
-                <Icon name="x" />
-              </IconButton>
-            </DialogTitle>
-
-            <DialogContent dividers>
-              <Stack spacing={3} sx={{ py: 1 }}>
-                {/* INFORMACIÓN DEL CLIENTE */}
-                <Box>
-                  <Typography
-                    variant="overline"
-                    sx={{
-                      color: '#7B856D',
-                      letterSpacing: 2
-                    }}
-                  >
-                    INFORMACIÓN DEL CLIENTE
-                  </Typography>
-
-                  <Typography
-                    variant="h5"
-                    sx={{
-                      fontFamily: 'Georgia, serif',
-                      color: '#343B32',
-                      mt: 1
-                    }}
-                  >
-                    {selectedBooking.client_name || 'Cliente no disponible'}
-                  </Typography>
-                </Box>
-
-                <Divider />
-
-                {/* INFORMACIÓN DEL EVENTO */}
-                <Box>
-                  <Typography
-                    variant="overline"
-                    sx={{
-                      color: '#7B856D',
-                      letterSpacing: 2
-                    }}
-                  >
-                    INFORMACIÓN DEL EVENTO
-                  </Typography>
-
-                  <Stack spacing={2} sx={{ mt: 2 }}>
-                    <DetailItem
-                      icon="calendar"
-                      label="Fecha del evento"
-                      value={formatPrettyDate(selectedBooking.event_date)}
-                    />
-
-                    <DetailItem
-                      icon="camera"
-                      label="Tipo de evento"
-                      value={selectedBooking.event_type || 'No especificado'}
-                    />
-
-                    <DetailItem
-                      icon="package"
-                      label="Paquete contratado"
-                      value={
-                        selectedPackage?.name ||
-                        selectedBooking.package ||
-                        'No especificado'
-                      }
-                    />
-
-                    <DetailItem
-                      icon="hash"
-                      label="Número de reservación"
-                      value={String(selectedBooking.id)}
-                    />
-                  </Stack>
-                </Box>
-
-                <Divider />
-
-                {/* ESTADO */}
-                <Box>
-                  <Typography
-                    variant="overline"
-                    sx={{
-                      color: '#7B856D',
-                      letterSpacing: 2
-                    }}
-                  >
-                    ESTADO DE LA RESERVACIÓN
-                  </Typography>
-
-                  <Box sx={{ mt: 1 }}>
-                    <StatusBadge status={selectedBooking.status} />
-                  </Box>
-                </Box>
-
-                <Divider />
-
-                {/* INFORMACIÓN DE PAGO */}
-                <Box>
-                  <Typography
-                    variant="overline"
-                    sx={{
-                      color: '#7B856D',
-                      letterSpacing: 2
-                    }}
-                  >
-                    RESUMEN DE PAGO
-                  </Typography>
-
-                  <Stack spacing={2} sx={{ mt: 2 }}>
-                    <MoneyItem
-                      label="Total del paquete"
-                      amount={formatMoney(total)}
-                    />
-
-                    <MoneyItem
-                      label="Anticipo registrado"
-                      amount={formatMoney(paid)}
-                    />
-
-                    <Divider />
-
-                    <MoneyItem
-                      label="Saldo pendiente"
-                      amount={formatMoney(pending)}
-                      strong
-                    />
-                  </Stack>
-                </Box>
-
-                <Alert severity="info">
-                  Los datos mostrados corresponden a la información
-                  disponible en el sistema. El historial detallado de
-                  movimientos y comprobantes de pago se integrará
-                  posteriormente.
-                </Alert>
-              </Stack>
-            </DialogContent>
-          </>
-        )}
-      </Dialog>
     </>
   );
 }

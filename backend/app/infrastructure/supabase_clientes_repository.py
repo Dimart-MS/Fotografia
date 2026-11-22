@@ -6,7 +6,8 @@ No se crean ni modifican tablas.
 """
 
 from sqlalchemy import select, update, func
-
+import secrets
+from app.core.security import hash_password
 
 class SupabaseClientesRepository:
 
@@ -50,9 +51,10 @@ class SupabaseClientesRepository:
 
 
     def crear_cliente(self, datos: dict, id_administrador: int):
-        """Registra un cliente administrativo sin crear credenciales."""
+        """Registra un cliente y genera su cuenta con contraseña temporal."""
 
         correo = datos["email"].strip().lower()
+        contrasena_temporal = secrets.token_urlsafe(12)
 
         with self.engine.begin() as conexion:
             cliente_existente = conexion.execute(
@@ -83,17 +85,33 @@ class SupabaseClientesRepository:
             id_cliente = cliente["id_cliente"]
 
             conexion.execute(
+                self.usuarios.insert().values(
+                    id_cliente=id_cliente,
+                    correo=correo,
+                    contrasena_hash=hash_password(contrasena_temporal),
+                    rol="Cliente",
+                    activo=True,
+                    registro_pendiente=False,
+                    debe_cambiar_contrasena=True,
+                )
+            )
+
+            conexion.execute(
                 self.auditoria.insert().values(
                     id_usuario=id_administrador,
                     accion="CREAR",
                     entidad="clientes",
                     id_registro=id_cliente,
-                    detalles={"origen": "panel_administrativo"},
+                    detalles={
+                        "origen": "panel_administrativo",
+                        "cuenta_usuario_creada": True,
+                    },
                 )
             )
 
-            return dict(cliente)
-
+            resultado = dict(cliente)
+            resultado["temporary_password"] = contrasena_temporal
+            return resultado
 
     def actualizar_cliente(
         self,

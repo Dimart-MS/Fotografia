@@ -28,6 +28,22 @@ import useStudio from '../../hooks/useStudio';
 
 // ==============================|| GESTOR DE MODALES Y NOTIFICACIONES ||============================== //
 
+function formatPaymentDeadline(value) {
+  if (!value) return 'No disponible';
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return 'No disponible';
+  }
+
+  return new Intl.DateTimeFormat('es-MX', {
+    dateStyle: 'long',
+    timeStyle: 'short',
+    timeZone: 'America/Mexico_City'
+  }).format(date);
+}
+
 export default function StudioDialogManager() {
   const {
     modal,
@@ -43,7 +59,15 @@ export default function StudioDialogManager() {
     selectedBooking,
     paymentAmount,
     setPaymentAmount,
-    handleSaveModal
+    extensionDate,
+    setExtensionDate,
+    extensionReason,
+    setExtensionReason,
+    cancelReason,
+    setCancelReason,
+    handleSaveModal,
+    temporaryPassword,
+    setTemporaryPassword
   } = useStudio();
 
   // ==============================|| DATOS CALCULADOS ||============================== //
@@ -60,10 +84,12 @@ export default function StudioDialogManager() {
       : modal === 'booking'
         ? 'Nueva solicitud de reserva'
         : modal === 'payment'
-          ? 'Confirmación de anticipo'
-          : modal === 'cancel'
-            ? 'Cancelar solicitud'
-            : '';
+          ? 'Registrar pago en efectivo'
+          : modal === 'extension'
+            ? 'Conceder prórroga de anticipo'
+            : modal === 'cancel'
+              ? 'Cancelar solicitud'
+              : '';
 
   const dialogDescription =
     modal === 'client'
@@ -71,10 +97,12 @@ export default function StudioDialogManager() {
       : modal === 'booking'
         ? 'Organiza una nueva solicitud de reservación.'
         : modal === 'payment'
-          ? 'Registra el anticipo recibido para confirmar el evento.'
-          : modal === 'cancel'
-            ? 'Revisa la información antes de cancelar la solicitud.'
-            : '';
+          ? 'Registra un anticipo o abono en efectivo. Los pagos aprobados se acumulan.'
+          : modal === 'extension'
+            ? 'Establece una nueva fecha límite y registra el motivo de la prórroga.'
+            : modal === 'cancel'
+              ? 'Revisa la información antes de cancelar la solicitud.'
+              : '';
 
   const submitButtonLabel = saving
     ? 'Guardando…'
@@ -83,8 +111,10 @@ export default function StudioDialogManager() {
       : modal === 'booking'
         ? 'Crear solicitud'
         : modal === 'payment'
-          ? 'Registrar y confirmar'
-          : 'Cancelar solicitud';
+          ? 'Registrar pago'
+          : modal === 'extension'
+            ? 'Conceder prórroga'
+            : 'Cancelar solicitud';
 
   // ==============================|| ESTILOS COMPARTIDOS ||============================== //
 
@@ -133,6 +163,26 @@ export default function StudioDialogManager() {
     bookingTotal - bookingPaid,
     0
   );
+
+  const bookingMinimum = Math.ceil(bookingTotal * 0.5);
+
+  const bookingMinimumRemaining = Math.max(
+    bookingMinimum - bookingPaid,
+    0
+  );
+
+  const isConfirmedBooking =
+    selectedBooking?.status === 'Confirmada';
+
+  const paymentAmountNumber = Number(paymentAmount);
+
+  const paymentAmountIsValid =
+    String(paymentAmount ?? '').trim() !== '' &&
+    Number.isFinite(paymentAmountNumber) &&
+    paymentAmountNumber > 0 &&
+    Math.round(paymentAmountNumber * 100) ===
+    paymentAmountNumber * 100 &&
+    paymentAmountNumber * 100 <= bookingRemaining;
 
   const bookingDetails = selectedBooking
     ? [
@@ -187,7 +237,7 @@ export default function StudioDialogManager() {
       {/* ========================================================= */}
 
       <Dialog
-        open={Boolean(modal) && !isDetailsModal}
+        open={Boolean(modal) && !isDetailsModal && modal !== 'temporaryPassword'}
         onClose={closeModal}
         fullWidth
         maxWidth="sm"
@@ -653,13 +703,10 @@ export default function StudioDialogManager() {
                   </Typography>
                 </Box>
 
-                <Alert
-                  severity="info"
-                  sx={{ borderRadius: 2 }}
-                >
-                  Para confirmar la reservación debes
-                  registrar un anticipo mínimo del 50 %
-                  del total contratado.
+                <Alert severity="info" sx={{ borderRadius: 2 }}>
+                  {isConfirmedBooking
+                    ? 'La reservación ya está confirmada. Puedes registrar abonos adicionales hasta liquidar el saldo.'
+                    : 'Puedes registrar abonos inferiores al 50 %. La reservación se confirmará cuando los pagos aprobados acumulados alcancen el anticipo mínimo.'}
                 </Alert>
 
                 <Box sx={summaryBoxSx}>
@@ -708,11 +755,61 @@ export default function StudioDialogManager() {
                         )}
                       </Typography>
                     </Stack>
+
+                    <Divider />
+
+                    <Stack
+                      direction="row"
+                      justifyContent="space-between"
+                      alignItems="center"
+                      spacing={2}
+                    >
+                      <Typography variant="body2">
+                        Pagos aprobados acumulados
+                      </Typography>
+
+                      <Typography fontWeight={700}>
+                        {formatMoney(bookingPaid)}
+                      </Typography>
+                    </Stack>
+
+                    {!isConfirmedBooking && (
+                      <Stack
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="center"
+                        spacing={2}
+                      >
+                        <Typography variant="body2">
+                          Falta para confirmar
+                        </Typography>
+
+                        <Typography fontWeight={700} color="warning.main">
+                          {formatMoney(bookingMinimumRemaining)}
+                        </Typography>
+                      </Stack>
+                    )}
+
+                    <Stack
+                      direction="row"
+                      justifyContent="space-between"
+                      alignItems="center"
+                      spacing={2}
+                    >
+                      <Typography variant="body2">
+                        Saldo pendiente
+                      </Typography>
+
+                      <Typography fontWeight={700}>
+                        {formatMoney(bookingRemaining)}
+                      </Typography>
+                    </Stack>
+
                   </Stack>
                 </Box>
 
                 <TextField
-                  label="Anticipo recibido (MXN)"
+                  label="Importe recibido en efectivo (MXN)"
                   type="number"
                   required
                   fullWidth
@@ -720,17 +817,138 @@ export default function StudioDialogManager() {
                   onChange={(event) =>
                     setPaymentAmount(event.target.value)
                   }
-                  helperText="Ingresa el importe recibido en pesos mexicanos."
+                  error={
+                    String(paymentAmount ?? '').trim() !== '' &&
+                    !paymentAmountIsValid
+                  }
+                  helperText={
+                    String(paymentAmount ?? '').trim() !== '' &&
+                      !paymentAmountIsValid
+                      ? 'Ingresa un importe válido, mayor que cero, con máximo dos decimales y sin superar el saldo pendiente.'
+                      : 'Puedes registrar un abono parcial o liquidar el saldo restante.'
+                  }
                   slotProps={{
                     htmlInput: {
-                      min:
-                        selectedBooking.total_cents / 200,
-                      max:
-                        selectedBooking.total_cents / 100,
+                      min: 0.01,
+                      max: bookingRemaining / 100,
                       step: '0.01'
                     }
                   }}
                 />
+              </Stack>
+            )}
+
+            {/* ================================================= */}
+            {/* CONCEDER PRÓRROGA DE ANTICIPO                      */}
+            {/* ================================================= */}
+
+            {modal === 'extension' && selectedBooking && (
+              <Stack spacing={3}>
+                <Alert severity="warning" sx={{ borderRadius: 2 }}>
+                  Esta reservación requiere una decisión administrativa
+                  sobre el anticipo. Puedes conceder una nueva fecha límite
+                  para que el cliente presente otro comprobante.
+                </Alert>
+
+                <Box sx={summaryBoxSx}>
+                  <Stack spacing={2}>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Cliente
+                      </Typography>
+
+                      <Typography fontWeight={700}>
+                        {selectedBooking.client_name}
+                      </Typography>
+                    </Box>
+
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Reservación
+                      </Typography>
+
+                      <Typography fontWeight={600}>
+                        #{selectedBooking.id}
+                      </Typography>
+                    </Box>
+
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Fecha del evento
+                      </Typography>
+
+                      <Typography fontWeight={600}>
+                        {formatPrettyDate(selectedBooking.event_date)}
+                      </Typography>
+                    </Box>
+
+                    <Divider />
+
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Fecha límite actual del anticipo
+                      </Typography>
+
+                      <Typography fontWeight={700} color="warning.main">
+                        {formatPaymentDeadline(
+                          selectedBooking.payment_deadline
+                        )}
+                      </Typography>
+                    </Box>
+
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Prórrogas anteriores
+                      </Typography>
+
+                      <Typography fontWeight={600}>
+                        {selectedBooking.numero_prorrogas ?? 0}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </Box>
+
+                <TextField
+                  label="Nueva fecha límite"
+                  type="date"
+                  required
+                  fullWidth
+                  value={extensionDate || ''}
+                  onChange={(event) => setExtensionDate(event.target.value)}
+                  slotProps={{
+                    inputLabel: {
+                      shrink: true
+                    },
+                    htmlInput: {
+                      min: getLocalToday()
+                    }
+                  }}
+                  helperText="Selecciona una fecha posterior al plazo anterior. El límite será a las 23:59:59, hora de Ciudad de México."
+                />
+
+                <TextField
+                  label="Motivo de la prórroga"
+                  required
+                  fullWidth
+                  multiline
+                  minRows={3}
+                  value={extensionReason || ''}
+                  onChange={(event) => setExtensionReason(event.target.value)}
+                  slotProps={{
+                    htmlInput: {
+                      maxLength: 2000
+                    }
+                  }}
+                  placeholder="Explica por qué se concede un nuevo plazo al cliente."
+                  helperText="El motivo se conservará en el historial de prórrogas."
+                />
+
+                <Alert severity="info" sx={{ borderRadius: 2 }}>
+                  Al conceder la prórroga, la reservación seguirá
+                  pendiente de anticipo y se actualizará la fecha
+                  límite. No se eliminarán pagos, comprobantes
+                  ni registros anteriores.
+                </Alert>
               </Stack>
             )}
 
@@ -809,6 +1027,27 @@ export default function StudioDialogManager() {
                   Cancelada. El registro permanecerá
                   disponible en el historial del estudio.
                 </Typography>
+
+                <TextField
+                  label="Motivo de cancelación"
+                  required
+                  fullWidth
+                  multiline
+                  minRows={3}
+                  value={cancelReason || ''}
+                  onChange={(event) => setCancelReason(event.target.value)}
+                  slotProps={{
+                    htmlInput: {
+                      maxLength: 500
+                    }
+                  }}
+                  placeholder="Explica por qué se cancela la solicitud."
+                  error={
+                    cancelReason.trim().length > 0 &&
+                    cancelReason.trim().length < 5
+                  }
+                  helperText="Obligatorio: entre 5 y 500 caracteres. El motivo quedará registrado en el historial de la reservación."
+                />
               </Stack>
             )}
 
@@ -855,9 +1094,23 @@ export default function StudioDialogManager() {
               type="submit"
               disabled={
                 saving ||
+                (modal === 'payment' && !paymentAmountIsValid) ||
                 (modal === 'booking' && !clients.length) ||
-                ((modal === 'payment' || modal === 'cancel') &&
-                  !selectedBooking)
+                (
+                  ['payment', 'cancel', 'extension'].includes(modal) &&
+                  !selectedBooking
+                ) ||
+                (
+                  modal === 'extension' &&
+                  (!extensionDate || !extensionReason.trim())
+                ) ||
+                (
+                  modal === 'cancel' &&
+                  (
+                    cancelReason.trim().length < 5 ||
+                    cancelReason.trim().length > 500
+                  )
+                )
               }
               color={
                 modal === 'cancel'
@@ -1019,6 +1272,40 @@ export default function StudioDialogManager() {
 
               <Divider />
 
+              {/* PLAZO DEL ANTICIPO */}
+
+              {selectedBooking.payment_deadline && (
+                <>
+                  <Box>
+                    <Typography
+                      variant="subtitle1"
+                      sx={{
+                        ...sectionTitleSx,
+                        mb: 2
+                      }}
+                    >
+                      Plazo del anticipo
+                    </Typography>
+
+                    <Stack spacing={1.5}>
+                      <Typography variant="body2">
+                        <strong>Fecha límite:</strong>{' '}
+                        {formatPaymentDeadline(
+                          selectedBooking.payment_deadline
+                        )}
+                      </Typography>
+
+                      <Typography variant="body2">
+                        <strong>Prórrogas concedidas:</strong>{' '}
+                        {selectedBooking.numero_prorrogas ?? 0}
+                      </Typography>
+                    </Stack>
+                  </Box>
+
+                  <Divider />
+                </>
+              )}
+
               {/* INFORMACIÓN DE PAGO */}
 
               <Box>
@@ -1059,7 +1346,7 @@ export default function StudioDialogManager() {
                       spacing={2}
                     >
                       <Typography variant="body2">
-                        Anticipo registrado
+                        Pagos aprobados acumulados
                       </Typography>
 
                       <Typography
@@ -1107,6 +1394,33 @@ export default function StudioDialogManager() {
                 </Box>
               </Box>
 
+              {/* AVISOS SEGÚN EL ESTADO */}
+
+              {bookingStatus === 'Comprobante enviado' && (
+                <Alert severity="info" sx={{ borderRadius: 2 }}>
+                  El cliente presentó un comprobante de anticipo.
+                  La reservación está pendiente de revisión administrativa
+                  desde el módulo de Pagos.
+                </Alert>
+              )}
+
+              {bookingStatus === 'Pendiente de anticipo' &&
+                selectedBooking.decision_anticipo_pendiente && (
+                  <Alert severity="warning" sx={{ borderRadius: 2 }}>
+                    Esta reservación requiere una decisión administrativa.
+                    Debes conceder una prórroga o cancelar la solicitud.
+                  </Alert>
+                )}
+
+              {bookingStatus === 'Pendiente de anticipo' &&
+                !selectedBooking.decision_anticipo_pendiente && (
+                  <Alert severity="info" sx={{ borderRadius: 2 }}>
+                    La reservación todavía no está confirmada.
+                    Se requiere registrar y aprobar un anticipo mínimo
+                    del 50 % del total contratado.
+                  </Alert>
+                )}
+
               {/* AVISO PARA RESERVAS CANCELADAS */}
 
               {bookingStatus === 'Cancelada' && (
@@ -1141,6 +1455,141 @@ export default function StudioDialogManager() {
             sx={primaryButtonSx}
           >
             Cerrar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ========================================================= */}
+      {/* CONTRASEÑA TEMPORAL DEL NUEVO CLIENTE                     */}
+      {/* ========================================================= */}
+
+      <Dialog
+        open={modal === 'temporaryPassword'}
+        onClose={(event, reason) => {
+          if (reason !== 'backdropClick' && reason !== 'escapeKeyDown') {
+            closeModal();
+          }
+        }}
+        fullWidth
+        maxWidth="sm"
+        disableEscapeKeyDown
+        slotProps={{
+          paper: {
+            sx: dialogPaperSx
+          }
+        }}
+      >
+        <DialogTitle sx={{ px: 3, pt: 3, pb: 2 }}>
+          <Stack spacing={1}>
+            <Typography
+              variant="overline"
+              sx={{
+                color: '#68745B',
+                letterSpacing: 2,
+                fontWeight: 700
+              }}
+            >
+              LUZ & MEMORIA
+            </Typography>
+
+            <Typography
+              variant="h5"
+              sx={{
+                fontFamily: 'Georgia, serif',
+                fontWeight: 600,
+                color: '#343B32'
+              }}
+            >
+              Cliente registrado correctamente
+            </Typography>
+
+            <Typography variant="body2" color="text.secondary">
+              Se generó una contraseña temporal para el nuevo cliente.
+            </Typography>
+          </Stack>
+        </DialogTitle>
+
+        <DialogContent dividers sx={{ px: 3, py: 3 }}>
+          <Stack spacing={3}>
+            <Alert severity="success" sx={{ borderRadius: 2 }}>
+              El cliente fue registrado y su cuenta de acceso fue creada.
+            </Alert>
+
+            <Box>
+              <Typography
+                variant="subtitle1"
+                sx={{ fontWeight: 700, mb: 1 }}
+              >
+                Contraseña temporal
+              </Typography>
+
+              <TextField
+                fullWidth
+                value={temporaryPassword || ''}
+                InputProps={{
+                  readOnly: true
+                }}
+                helperText="Esta contraseña solamente se mostrará una vez."
+              />
+            </Box>
+
+            <Button
+              variant="outlined"
+              fullWidth
+              disabled={!temporaryPassword}
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(temporaryPassword);
+                  setToast('Contraseña temporal copiada correctamente.');
+                } catch {
+                  setToast(
+                    'No se pudo copiar automáticamente. Selecciona la contraseña para copiarla.'
+                  );
+                }
+              }}
+              sx={{
+                borderColor: '#68745B',
+                color: '#3B5C30',
+                textTransform: 'none',
+                fontWeight: 600,
+                '&:hover': {
+                  borderColor: '#3B5C30',
+                  backgroundColor: '#F4F6F1'
+                }
+              }}
+            >
+              Copiar contraseña temporal
+            </Button>
+
+            <Alert severity="warning" sx={{ borderRadius: 2 }}>
+              Comparte esta contraseña de forma segura con el cliente.
+              En su primer inicio de sesión deberá cambiarla
+              obligatoriamente antes de utilizar el sistema.
+            </Alert>
+
+            <Typography variant="body2" color="text.secondary">
+              Por seguridad, la contraseña no podrá consultarse nuevamente
+              después de cerrar esta ventana.
+            </Typography>
+          </Stack>
+        </DialogContent>
+
+        <DialogActions
+          sx={{
+            px: 3,
+            py: 2,
+            borderTop: '1px solid #E5E7E1'
+          }}
+        >
+          <Button
+            variant="contained"
+            onClick={() => {
+              setTemporaryPassword('');
+              closeModal();
+            }}
+            sx={primaryButtonSx}
+          >
+            Entendido, cerrar
           </Button>
         </DialogActions>
       </Dialog>

@@ -30,6 +30,7 @@ class SupabaseUserRepository:
             "role": row["rol"],
             "is_active": row["activo"],
             "registro_pendiente": row["registro_pendiente"],
+            "must_change_password": row["debe_cambiar_contrasena"],
         }
 
     def get_by_email(self, email: str):
@@ -94,3 +95,41 @@ class SupabaseUserRepository:
                 "role": "Cliente",
                 "is_active": True,
             }
+
+    def change_password(self, user_id: int, current_password: str, new_password: str):
+        from sqlalchemy import update
+        from app.core.security import hash_password, verify_password
+        from fastapi import HTTPException
+
+        with self.engine.begin() as conexion:
+            usuario = conexion.execute(
+                select(self.users)
+                .where(self.users.c.id_usuario == user_id)
+                .with_for_update()
+            ).mappings().first()
+
+            if usuario is None or not usuario["activo"]:
+                raise HTTPException(404, "Usuario no encontrado o inactivo")
+
+            if not verify_password(
+                current_password,
+                usuario["contrasena_hash"],
+            ):
+                raise HTTPException(400, "La contraseña actual es incorrecta")
+
+            if verify_password(new_password, usuario["contrasena_hash"]):
+                raise HTTPException(
+                    400,
+                    "La nueva contraseña debe ser diferente de la anterior",
+                )
+
+            conexion.execute(
+                update(self.users)
+                .where(self.users.c.id_usuario == user_id)
+                .values(
+                    contrasena_hash=hash_password(new_password),
+                    debe_cambiar_contrasena=False,
+                )
+            )
+
+        return {"message": "Contraseña actualizada correctamente"}

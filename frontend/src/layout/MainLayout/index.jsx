@@ -33,7 +33,7 @@ export default function MainLayout({ children }) {
     estudioMenu.children[0];
 
   const handlePrimaryAction = () => {
-    if (page === 'paquetes') return;
+    if (page === 'paquetes' || page === 'ventas') return;
 
     if (page === 'clientes' || !clients.length) {
       openClientModal();
@@ -111,7 +111,7 @@ export default function MainLayout({ children }) {
                 </Typography>
               </Box>
 
-              {page !== 'inicio' && (
+              {page !== 'inicio' && page !== 'ventas' && (
                 <Button
                   variant="contained"
                   startIcon={<Icon name="plus" />}

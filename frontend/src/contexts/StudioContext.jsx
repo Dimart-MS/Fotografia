@@ -17,6 +17,7 @@ import {
 } from '../store/slices/booking';
 import { closeSnackbar, openSnackbar } from '../store/slices/snackbar';
 import { loginUser, getCurrentUser } from '../api/authService';
+import { concederProrrogaReserva } from '../api/reservasService';
 
 // ==============================|| CONTEXTO DEL ESTUDIO CONECTADO A REDUX ||============================== //
 
@@ -35,11 +36,15 @@ export function StudioProvider({ children }) {
   );
 
   const [accessKey, setAccessKey] = useState('');
+  const [temporaryPassword, setTemporaryPassword] = useState('');
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
   const [page, setPage] = useState('inicio');
-
+  const [dataVersion, setDataVersion] = useState(0);
+  const notifyDataChanged = useCallback(() => {
+    setDataVersion((version) => version + 1);
+  }, []);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [modal, setModal] = useState(null);
@@ -47,6 +52,9 @@ export function StudioProvider({ children }) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('Todas');
   const [paymentAmount, setPaymentAmount] = useState('');
+  const [extensionDate, setExtensionDate] = useState('');
+  const [extensionReason, setExtensionReason] = useState('');
+  const [cancelReason, setCancelReason] = useState('');
   const [calendarMonth, setCalendarMonth] = useState(
     () => new Date(`${getLocalToday()}T12:00:00`)
   );
@@ -152,6 +160,7 @@ export function StudioProvider({ children }) {
   };
 
   const openClientModal = () => {
+    setTemporaryPassword('');
     setForm({ ...EMPTY_CLIENT_FORM });
     setError('');
     setModal('client');
@@ -169,16 +178,85 @@ export function StudioProvider({ children }) {
   };
 
   const openConfirmPaymentModal = (booking) => {
+    const estadosPermitidos = [
+      'Pendiente de anticipo',
+      'Confirmada'
+    ];
+
+    if (!booking || !estadosPermitidos.includes(booking.status)) {
+      setError(
+        'No se puede registrar un pago en el estado actual de la reservación.'
+      );
+      return;
+    }
+
+    if (
+      booking.status === 'Pendiente de anticipo' &&
+      booking.decision_anticipo_pendiente
+    ) {
+      setError(
+        'Esta reservación requiere una decisión administrativa antes de registrar un pago.'
+      );
+      return;
+    }
+
+    const totalCentavos = Number(booking.total_cents) || 0;
+    const pagadoCentavos = Number(booking.paid_cents) || 0;
+    const saldoCentavos = Math.max(
+      totalCentavos - pagadoCentavos,
+      0
+    );
+
+    if (saldoCentavos <= 0) {
+      setError('Esta reservación ya está completamente liquidada.');
+      return;
+    }
+
     dispatch(setSelectedBooking(booking));
-    setPaymentAmount(String(booking.total_cents / 200));
+
+    // El administrador captura el importe realmente recibido.
+    // No se exige un anticipo individual del 50 %.
+    setPaymentAmount('');
+
     setError('');
     setModal('payment');
   };
 
   const openCancelBookingModal = (booking) => {
+    if (
+      !booking ||
+      booking.status !== 'Pendiente de anticipo' ||
+      !booking.decision_anticipo_pendiente
+    ) {
+      setError(
+        'Esta reservación no tiene una decisión administrativa pendiente por vencimiento.'
+      );
+      return;
+    }
+
     dispatch(setSelectedBooking(booking));
+    setCancelReason('');
     setError('');
     setModal('cancel');
+  };
+
+  const openExtensionModal = (booking) => {
+    if (
+      booking.status !== 'Pendiente de anticipo' ||
+      !booking.decision_anticipo_pendiente
+    ) {
+      setError(
+        'Esta reservación no requiere una decisión administrativa de prórroga.'
+      );
+      return;
+    }
+
+    dispatch(setSelectedBooking(booking));
+
+    setExtensionDate('');
+    setExtensionReason('');
+    setError('');
+    setModal('extension');
   };
 
   // Abrir detalles de una reservación sin modificarla
@@ -190,6 +268,9 @@ export function StudioProvider({ children }) {
 
   const closeModal = () => {
     if (!saving) {
+      if (modal === 'temporaryPassword') {
+        setTemporaryPassword('');
+      }
       setModal(null);
     }
   };
@@ -198,28 +279,128 @@ export function StudioProvider({ children }) {
     event.preventDefault();
     setSaving(true);
     setError('');
-
+    let operationCompleted = false;
     try {
       if (modal === 'client') {
-        await dispatch(addClient(form, accessKey));
-        setToast('Cliente registrado. Ya puedes reservar su evento.');
+        const nuevoCliente = await dispatch(addClient(form, accessKey));
+        if (!nuevoCliente?.temporary_password) {
+          throw new Error(
+            'El cliente se registró, pero no se recibió su contraseña temporal.'
+          );
+        }
+        setTemporaryPassword(nuevoCliente.temporary_password);
+        setToast('Cliente registrado correctamente.');
       } else if (modal === 'booking') {
         await dispatch(addBooking(form, accessKey));
         setToast('Solicitud guardada. La fecha se apartará al confirmar el anticipo.');
       } else if (modal === 'payment' && selectedBooking) {
-        await dispatch(
-          confirmBookingDeposit(selectedBooking.id, paymentAmount, accessKey)
+        const importe = Number(paymentAmount);
+        const totalCentavos = Number(selectedBooking.total_cents) || 0;
+        const pagadoCentavos = Number(selectedBooking.paid_cents) || 0;
+        const saldoCentavos = Math.max(
+          totalCentavos - pagadoCentavos,
+          0
         );
-        setToast('Anticipo registrado y fecha confirmada.');
+
+        if (
+          !Number.isFinite(importe) ||
+          importe <= 0 ||
+          !Number.isInteger(importe * 100) ||
+          importe * 100 > saldoCentavos
+        ) {
+          throw new Error(
+            'Ingresa un importe válido, mayor que cero, con máximo dos decimales y sin superar el saldo pendiente.'
+          );
+        }
+
+        const resultado = await dispatch(
+          confirmBookingDeposit(
+            selectedBooking.id,
+            paymentAmount,
+            accessKey
+          )
+        );
+
+        if (resultado?.confirmed_now) {
+          setToast(
+            'Pago registrado correctamente. Se alcanzó el anticipo mínimo y la reservación quedó confirmada.'
+          );
+        } else if (resultado?.balance_cents === 0) {
+          setToast(
+            'Pago registrado correctamente. La reservación quedó completamente liquidada.'
+          );
+        } else {
+          setToast(
+            'Abono en efectivo registrado correctamente. El importe se acumuló a los pagos aprobados.'
+          );
+        }
       } else if (modal === 'cancel' && selectedBooking) {
-        await dispatch(cancelPendingBooking(selectedBooking.id, accessKey));
-        setToast('Solicitud cancelada.');
+        const motivo = cancelReason.trim();
+
+        if (motivo.length < 5 || motivo.length > 500) {
+          throw new Error(
+            'El motivo de cancelación debe tener entre 5 y 500 caracteres.'
+          );
+        }
+
+        await dispatch(
+          cancelPendingBooking(
+            selectedBooking.id,
+            motivo,
+            accessKey
+          )
+        );
+
+        setCancelReason('');
+        setToast('Solicitud cancelada. Se conservó su historial.');
+      } else if (modal === 'extension' && selectedBooking) {
+        if (!extensionDate) {
+          throw new Error('Selecciona la nueva fecha límite.');
+        }
+        if (!extensionReason.trim()) {
+          throw new Error('Debes indicar el motivo de la prórroga.');
+        }
+
+        const nuevaFechaLimite = new Date(
+          `${extensionDate}T23:59:59-06:00`
+        ).toISOString();
+        await concederProrrogaReserva(
+          selectedBooking.id,
+          nuevaFechaLimite,
+          extensionReason.trim(),
+          accessKey
+        );
+        setToast('Prórroga concedida correctamente.');
       }
 
-      setModal(null);
-      await refreshStudioData();
+      operationCompleted = true;
+      notifyDataChanged();
+      if (modal === 'client') {
+        setModal('temporaryPassword');
+      } else {
+        setModal(null);
+      }
+
+      const refreshed = await refreshStudioData();
+
+      if (!refreshed) {
+        setToast(
+          'La operación se guardó, pero no se pudieron actualizar todos los datos. Recarga la pantalla.'
+        );
+      }
     } catch (err) {
-      setError(err.message);
+      if (operationCompleted) {
+        // Mantener abierto el modal de contraseña temporal si corresponde.
+        setModal((actual) =>
+          actual === 'temporaryPassword' ? actual : null
+        );
+
+        setToast(
+          'La operación se guardó, pero ocurrió un problema al actualizar la información. Recarga la pantalla.'
+        );
+      } else {
+        setError(err.message || 'No se pudo completar la operación.');
+      }
     } finally {
       setSaving(false);
     }
@@ -252,6 +433,12 @@ export function StudioProvider({ children }) {
     selectedBooking,
     paymentAmount,
     setPaymentAmount,
+    extensionDate,
+    setExtensionDate,
+    extensionReason,
+    setExtensionReason,
+    cancelReason,
+    setCancelReason,
     calendarMonth,
     setCalendarMonth,
     refreshStudioData,
@@ -262,9 +449,14 @@ export function StudioProvider({ children }) {
     openBookingModal,
     openConfirmPaymentModal,
     openCancelBookingModal,
+    openExtensionModal,
     openBookingDetailsModal,
     closeModal,
-    handleSaveModal
+    handleSaveModal,
+    dataVersion,
+    notifyDataChanged,
+    temporaryPassword,
+    setTemporaryPassword,
   };
 
   return <StudioContext.Provider value={value}>{children}</StudioContext.Provider>;

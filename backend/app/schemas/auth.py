@@ -58,12 +58,12 @@ class UserLoginInput(BaseModel):
 
 class UserResponse(BaseModel):
     """Información pública de una cuenta."""
-
     id: int
     client_id: int | None
     email: str
     role: Literal["Administrador", "Cliente"]
     is_active: bool
+    must_change_password: bool = False
 
 
 class TokenResponse(BaseModel):
@@ -72,3 +72,8 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserResponse
+
+class ChangePasswordInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    current_password: str = Field(min_length=1)
+    new_password: str = Field(min_length=8, max_length=128)

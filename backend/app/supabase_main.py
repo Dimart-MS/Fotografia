@@ -6,12 +6,13 @@ la autenticación JWT y los routers de la aplicación.
 
 No crea ni modifica la estructura de la base de datos.
 """
-
+import asyncio
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
+from fastapi import Depends, HTTPException
 from app.api.routes.clientes import create_clientes_router
 from app.auth import create_auth_router
 from app.core.config import settings
@@ -38,7 +39,41 @@ from app.infrastructure.supabase_reservas_repository import (
 )
 
 from app.core.security import require_user
+from app.api.routes.ventas import create_ventas_router
+from app.api.routes.pagos import create_pagos_router
+from app.infrastructure.supabase_ventas_repository import SupabaseVentasRepository
+from app.infrastructure.supabase_pagos_repository import (
+    SupabasePagosRepository,
+)
+from app.infrastructure.supabase_vencimientos_repository import (
+    SupabaseVencimientosRepository,
+)
 
+logger = logging.getLogger(__name__)
+async def revisar_vencimientos_periodicamente(app: FastAPI):
+    """
+    Revisa los anticipos vencidos cada 60 segundos.
+    No cancela automáticamente reservaciones.
+    Marca las solicitudes que requieren una
+    decisión administrativa.
+    """
+    while True:
+        try:
+            resultado = await asyncio.to_thread(
+                app.state.vencimientos_repo.cancelar_vencidas
+            )
+            if resultado["total_pendientes_decision"] > 0:
+                logger.info(
+                    "Reservaciones pendientes de decisión: %s",
+                    resultado["reservaciones_pendientes_decision"],
+                )
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception(
+                "Error al revisar vencimientos de anticipos."
+            )
+        await asyncio.sleep(60)
 
 # ==============================
 # CICLO DE VIDA DE LA APLICACIÓN
@@ -67,10 +102,10 @@ async def lifespan(app: FastAPI):
         )
 
         app.state.paquetes_repo = SupabasePaquetesRepository(
-    engine,
-    tablas["paquetes"],
-    tablas["auditoria"],
-)
+            engine,
+            tablas["paquetes"],
+            tablas["auditoria"],
+        )
 
         app.state.reservas_repo = SupabaseReservasRepository(
             engine,
@@ -78,10 +113,52 @@ async def lifespan(app: FastAPI):
             tablas["clientes"],
             tablas["paquetes"],
             tablas["pagos"],
+            tablas["ventas"],
+            tablas["detalle_ventas"],
+            tablas["usuarios"],
+            tablas["historial_prorrogas_anticipo"],
+            tablas["comprobantes_pago"],
+            tablas["historial_reservaciones"],
         )
 
-        yield
+        app.state.ventas_repo = SupabaseVentasRepository(
+            engine,
+            tablas["ventas"],
+            tablas["detalle_ventas"],
+            tablas["clientes"],
+            tablas["reservaciones"],
+            tablas["paquetes"],
+        )
 
+        app.state.pagos_repo = SupabasePagosRepository(
+            engine,
+            tablas["pagos"],
+            tablas["comprobantes_pago"],
+            tablas["historial_validaciones_pago"],
+            tablas["reservaciones"],
+            tablas["ventas"],
+            tablas["clientes"],
+            tablas["usuarios"],
+        )
+
+        app.state.vencimientos_repo = SupabaseVencimientosRepository(
+            engine,
+            tablas["reservaciones"],
+            tablas["ventas"],
+            tablas["pagos"],
+            tablas["comprobantes_pago"],
+        )
+        tarea_vencimientos = asyncio.create_task(
+            revisar_vencimientos_periodicamente(app)
+        )
+        try:
+            yield
+        finally:
+            tarea_vencimientos.cancel()
+            try:
+                await tarea_vencimientos
+            except asyncio.CancelledError:
+                pass
     finally:
         engine.dispose()
 
@@ -145,19 +222,47 @@ class UsuariosRepoProxy:
             password_hash,
         )
 
+    def change_password(self, user_id, current_password, new_password):
+        return app.state.usuarios_repo.change_password(
+            user_id,
+            current_password,
+            new_password,
+        )
+
 
 usuarios_proxy = UsuariosRepoProxy()
-usuario_autenticado = require_user(usuarios_proxy)
+
+# Autenticación básica: permite cambiar la contraseña temporal.
+usuario_autenticado_basico = require_user(usuarios_proxy)
+
+
+def usuario_autenticado(
+    usuario=Depends(usuario_autenticado_basico),
+):
+    """Impide utilizar el sistema con una contraseña temporal."""
+    if usuario.get("must_change_password", False):
+        raise HTTPException(
+            status_code=403,
+            detail="Debes cambiar tu contraseña temporal antes de continuar.",
+        )
+
+    return usuario
 
 
 # ==============================
 # SEGURIDAD
 # ==============================
 
-solo_administrador = require_role(
-    usuarios_proxy,
-    "Administrador",
-)
+def solo_administrador(
+    usuario=Depends(usuario_autenticado),
+):
+    if usuario["role"] != "Administrador":
+        raise HTTPException(
+            status_code=403,
+            detail="Acceso exclusivo para administradores.",
+        )
+
+    return usuario
 
 
 # ==============================
@@ -184,6 +289,14 @@ app.include_router(
 
 app.include_router(
     create_reservas_router(usuario_autenticado)
+)
+
+app.include_router(
+    create_ventas_router(solo_administrador)
+)
+
+app.include_router(
+    create_pagos_router(usuario_autenticado)
 )
 
 # ==============================

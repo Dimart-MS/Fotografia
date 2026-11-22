@@ -63,20 +63,18 @@ const estudioMenu = {
       eyebrow: 'CONTROL FINANCIERO',
       heading: 'Gestión de ventas',
       subtitle: 'Operaciones comerciales y sus detalles.',
-      icon: 'home',
-      section: 'FINANZAS',
-      enabled: false
+      icon: 'check',
+      section: 'FINANZAS'
     },
     {
       id: 'pagos',
-      title: 'Pagos',
-      breadcrumb: 'Pagos',
+      title: 'Pagos y comprobantes',
+      breadcrumb: 'Pagos y comprobantes',
       eyebrow: 'CONTROL FINANCIERO',
-      heading: 'Control de pagos',
-      subtitle: 'Pagos, comprobantes y validaciones.',
+      heading: 'Pagos y comprobantes',
+      subtitle: 'Consulta pagos, revisa comprobantes y valida anticipos.',
       icon: 'check',
-      section: 'FINANZAS',
-      enabled: false
+      section: 'FINANZAS'
     },
     {
       id: 'galerias',
