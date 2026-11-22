@@ -15,17 +15,14 @@ import BookingRequestView from '../views/portal/BookingRequestView';
 import DashboardView from '../views/dashboard';
 import ClientesView from '../views/clientes';
 import ReservasView from '../views/reservas';
+import PaquetesView from '../views/paquetes';
+import GaleriasView from '../views/galerias';
+import EntregasView from '../views/entregas';
+import VentasView from '../views/ventas';
+import PagosView from '../views/pagos';
 
 import StudioDialogManager from '../views/modals/StudioDialogManager';
 import useStudio from '../hooks/useStudio';
-import PaquetesView from '../views/paquetes';
-<<<<<<< HEAD
-import GaleriasView from '../views/galerias';
-import EntregasView from '../views/entregas';
-=======
-import VentasView from '../views/ventas';
-import PagosView from '../views/pagos';
->>>>>>> 454ab2b (Integracion de reservas, pagos, ventas y portal de clientes)
 
 export default function AppRoutes() {
     const {
@@ -39,6 +36,7 @@ export default function AppRoutes() {
     const [bookingDate, setBookingDate] = useState('');
     const [loginReturnView, setLoginReturnView] = useState('home');
     const [registerReturnView, setRegisterReturnView] = useState('home');
+
     const abrirNuevaReservacion = () => {
         setBookingDate('');
         setPublicView('availability');
@@ -50,7 +48,6 @@ export default function AppRoutes() {
         setPublicView('login');
     };
 
-    // Redirección automática según el rol
     // Redirección automática según el rol
     const handleLoginSuccess = async (session) => {
         const role = session.user.role;
@@ -64,7 +61,7 @@ export default function AppRoutes() {
         if (role === 'Cliente') {
             setCustomerSession(session);
 
-            // Primer inicio de sesión con contraseña temporal.
+            // Primer inicio de sesión con contraseña temporal
             if (session.user.must_change_password) {
                 setPublicView('change-password');
                 return;
@@ -91,13 +88,10 @@ export default function AppRoutes() {
                     {page === 'clientes' && <ClientesView />}
                     {page === 'reservas' && <ReservasView />}
                     {page === 'paquetes' && <PaquetesView />}
-<<<<<<< HEAD
                     {page === 'galerias' && <GaleriasView />}
                     {page === 'entregas' && <EntregasView />}
-=======
                     {page === 'ventas' && <VentasView />}
                     {page === 'pagos' && <PagosView />}
->>>>>>> 454ab2b (Integracion de reservas, pagos, ventas y portal de clientes)
                 </MainLayout>
 
                 <StudioDialogManager />
