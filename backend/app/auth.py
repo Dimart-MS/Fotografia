@@ -16,6 +16,7 @@ from app.schemas.auth import (
     UserLoginInput,
     UserRegisterInput,
     UserResponse,
+    ChangePasswordInput,
 )
 
 
@@ -117,5 +118,16 @@ def create_auth_router(repository):
     @router.get("/me", response_model=UserResponse)
     def me(user=Depends(current_user)):
         return user
+
+    @router.post("/change-password")
+    def change_password(
+        body: ChangePasswordInput,
+        user=Depends(current_user),
+    ):
+        return repository.change_password(
+            user["id"],
+            body.current_password,
+            body.new_password,
+        )
 
     return router

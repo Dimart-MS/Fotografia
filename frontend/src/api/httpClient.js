@@ -1,17 +1,28 @@
+
 // ==============================|| CLIENTE HTTP ||============================== //
 
 /**
  * Ejecuta peticiones HTTP hacia FastAPI.
  *
+ * Admite JSON y FormData.
  * token: JWT del usuario autenticado.
- * Las rutas públicas pueden llamarse sin token.
  */
 export async function studioRequest(path, options = {}, token = '') {
+  const isFormData = options.body instanceof FormData;
+
   const headers = {
-    ...(options.body != null ? { 'Content-Type': 'application/json' } : {}),
+    ...(!isFormData && options.body != null
+      ? { 'Content-Type': 'application/json' }
+      : {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers || {})
   };
+
+  // El navegador debe establecer el boundary de multipart/form-data.
+  if (isFormData) {
+    delete headers['Content-Type'];
+    delete headers['content-type'];
+  }
 
   let response;
 
@@ -26,7 +37,11 @@ export async function studioRequest(path, options = {}, token = '') {
     );
   }
 
-  const payload = await response.json().catch(() => null);
+  const contentType = response.headers.get('content-type') || '';
+
+  const payload = contentType.includes('application/json')
+    ? await response.json().catch(() => null)
+    : await response.text().catch(() => null);
 
   if (!response.ok) {
     const detail = payload?.detail;
@@ -37,7 +52,11 @@ export async function studioRequest(path, options = {}, token = '') {
         .filter(Boolean)
         .join(', ');
 
-      throw new Error(`Revisa los campos: ${invalidFields}`);
+      throw new Error(
+        invalidFields
+          ? `Revisa los campos: ${invalidFields}`
+          : 'Los datos enviados no son válidos.'
+      );
     }
 
     throw new Error(

@@ -9,8 +9,13 @@ import LogoutConfirmDialog from '../../ui-component/LogoutConfirmDialog';
 import { studioRequest } from '../../api/httpClient';
 import { fetchReservas } from '../../api/reservasService';
 import { updateCliente } from '../../api/clientesService';
-import { fetchGalerias, fetchGaleria, descargarFotografia, descargarVideo } from '../../api/galeriasService';
 
+import { fetchGalerias, fetchGaleria, descargarFotografia, descargarVideo } from '../../api/galeriasService';
+import {
+  fetchMisComprobantes,
+  fetchMisPagos,
+  presentarComprobante
+} from '../../api/pagosService';
 // ==============================|| PORTAL DEL CLIENTE ||============================== //
 
 const SECTIONS = [
@@ -83,7 +88,6 @@ function MoneyLine({ label, value, strong = false }) {
   );
 }
 
-
 function normalizeList(value) {
   if (Array.isArray(value)) return value;
   if (Array.isArray(value?.galerias)) return value.galerias;
@@ -117,7 +121,11 @@ function openExternalFile(url) {
   if (url) window.open(url, '_blank', 'noopener,noreferrer');
 }
 
-export default function CustomerPortalView({ session, onLogout }) {
+export default function CustomerPortalView({
+  session,
+  onLogout,
+  onNewReservation
+}) {
   const [activeSection, setActiveSection] = useState('reservas');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
@@ -131,6 +139,8 @@ export default function CustomerPortalView({ session, onLogout }) {
   const [profileMessage, setProfileMessage] = useState('');
   const [profileError, setProfileError] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
+
+    // Estados de galerías
   const [galleries, setGalleries] = useState([]);
   const [galleryLoading, setGalleryLoading] = useState(false);
   const [galleryError, setGalleryError] = useState('');
@@ -141,19 +151,52 @@ export default function CustomerPortalView({ session, onLogout }) {
   const [photoUrls, setPhotoUrls] = useState({});
   const [videoUrls, setVideoUrls] = useState({});
 
+  // Estados de pagos y comprobantes
+  const [customerPayments, setCustomerPayments] = useState([]);
+  const [customerProofs, setCustomerProofs] = useState([]);
+  const [paymentError, setPaymentError] = useState('');
+  const [paymentMessage, setPaymentMessage] = useState('');
+  const [uploadReservation, setUploadReservation] = useState(null);
+  const [proofFile, setProofFile] = useState(null);
+  const [uploadingProof, setUploadingProof] = useState(false);
+  const [proofPreview, setProofPreview] = useState(null);
+
+  // Vista previa del comprobante
+  useEffect(() => {
+    if (!proofFile || !['image/jpeg', 'image/png'].includes(proofFile.type)) {
+      setProofPreview(null);
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(proofFile);
+    setProofPreview(previewUrl);
+
+    return () => {
+      URL.revokeObjectURL(previewUrl);
+    };
+  }, [proofFile]);
   useEffect(() => {
     let active = true;
     async function loadCustomerData() {
       setLoading(true);
       setLoadError('');
       try {
-        const [customerData, reservationData] = await Promise.all([
-          studioRequest(`/api/clientes/${session.user.client_id}`, { method: 'GET' }, session.token),
-          fetchReservas(session.token)
-        ]);
+        const [customerData, reservationData, paymentsData, proofsData] =
+          await Promise.all([
+            studioRequest(
+              `/api/clientes/${session.user.client_id}`,
+              { method: 'GET' },
+              session.token
+            ),
+            fetchReservas(session.token),
+            fetchMisPagos(session.token),
+            fetchMisComprobantes(session.token)
+          ]);
         if (!active) return;
         setCustomer(customerData);
         setReservations(Array.isArray(reservationData) ? reservationData : []);
+        setCustomerPayments(Array.isArray(paymentsData) ? paymentsData : []);
+        setCustomerProofs(Array.isArray(proofsData) ? proofsData : []);
         setProfileForm({
           name: customerData.name || '', email: customerData.email || '',
           phone: customerData.phone || '', address: customerData.address || ''
@@ -248,6 +291,112 @@ export default function CustomerPortalView({ session, onLogout }) {
     </Box>
   );
 
+  async function refreshPaymentData() {
+    const [reservationData, paymentsData, proofsData] = await Promise.all([
+      fetchReservas(session.token),
+      fetchMisPagos(session.token),
+      fetchMisComprobantes(session.token)
+    ]);
+
+    setReservations(Array.isArray(reservationData) ? reservationData : []);
+    setCustomerPayments(Array.isArray(paymentsData) ? paymentsData : []);
+    setCustomerProofs(Array.isArray(proofsData) ? proofsData : []);
+  }
+
+  function getReservationProofs(reservation) {
+    return customerProofs.filter(
+      (proof) => Number(proof.id_reservacion) === Number(reservation.id)
+    );
+  }
+
+  function canUploadProof(reservation) {
+    const status = String(reservation.status || '');
+    const total = moneyValue(reservation.total_cents);
+    const paid = moneyValue(reservation.paid_cents);
+
+    if (!['Pendiente de anticipo', 'Confirmada'].includes(status)) {
+      return false;
+    }
+
+    if (total <= 0 || paid >= total) {
+      return false;
+    }
+
+    if (
+      status === 'Pendiente de anticipo' &&
+      reservation.decision_anticipo_pendiente === true
+    ) {
+      return false;
+    }
+
+    return !getReservationProofs(reservation).some(
+      (proof) => proof.estado === 'Pendiente'
+    );
+  }
+
+  function openProofUpload(reservation) {
+    setUploadReservation(reservation);
+    setProofFile(null);
+    setPaymentError('');
+    setPaymentMessage('');
+  }
+
+  function closeProofUpload() {
+    if (uploadingProof) return;
+
+    setUploadReservation(null);
+    setProofFile(null);
+    setPaymentError('');
+  }
+
+  async function handleProofUpload() {
+    if (!uploadReservation || uploadingProof) return;
+
+    setPaymentError('');
+
+    if (!proofFile) {
+      setPaymentError('Selecciona una imagen del comprobante.');
+      return;
+    }
+
+    if (!['image/jpeg', 'image/png'].includes(proofFile.type)) {
+      setPaymentError('Solo se permiten imágenes JPG o PNG.');
+      return;
+    }
+
+    if (proofFile.size > 10 * 1024 * 1024 || proofFile.size === 0) {
+      setPaymentError('La imagen debe tener un tamaño mayor que cero y no superar 10 MB.');
+      return;
+    }
+
+    setUploadingProof(true);
+
+    try {
+      await presentarComprobante(
+        {
+          id_reservacion: uploadReservation.id,
+          archivo: proofFile
+        },
+        session.token
+      );
+
+      setUploadReservation(null);
+      setProofFile(null);
+      setPaymentMessage(
+        'Comprobante enviado correctamente. El administrador revisará ' +
+        'la imagen y registrará el importe recibido.'
+      );
+
+      await refreshPaymentData();
+    } catch (error) {
+      setPaymentError(
+        error.message || 'No fue posible enviar el comprobante.'
+      );
+    } finally {
+      setUploadingProof(false);
+    }
+  }
+
   async function handleSaveProfile(event) {
     event.preventDefault();
     setProfileMessage('');
@@ -314,8 +463,43 @@ export default function CustomerPortalView({ session, onLogout }) {
                   <Typography variant="body2" color="text.secondary">Anticipo registrado: <strong>{formatPrice(paid)}</strong></Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>Saldo calculado: <strong>{formatPrice(Math.max(total - paid, 0))}</strong></Typography>
                 </Box>
-                <Button variant="outlined" onClick={() => setSelectedReservation(reservation)} sx={{ borderColor: '#AAB8A1', color: '#526047', textTransform: 'none' }}>Ver detalles</Button>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                  {canUploadProof(reservation) && (
+                    <Button
+                      variant="contained"
+                      onClick={() => openProofUpload(reservation)}
+                      sx={{
+                        bgcolor: '#68745B',
+                        textTransform: 'none',
+                        '&:hover': { bgcolor: '#526047' }
+                      }}
+                    >
+                      Subir comprobante
+                    </Button>
+                  )}
+
+                  <Button
+                    variant="outlined"
+                    onClick={() => setSelectedReservation(reservation)}
+                    sx={{
+                      borderColor: '#AAB8A1',
+                      color: '#526047',
+                      textTransform: 'none'
+                    }}
+                  >
+                    Ver detalles
+                  </Button>
+                </Stack>
               </Stack>
+              {getReservationProofs(reservation).some(
+                (proof) => proof.estado === 'Pendiente'
+              ) && (
+                  <Alert severity="info" sx={{ mt: 2 }}>
+                    Tienes un comprobante pendiente de revisión.
+                    Podrás enviar otro cuando el administrador lo revise,
+                    siempre que exista saldo pendiente.
+                  </Alert>
+                )}
             </Paper>
           );
         })}
@@ -360,7 +544,89 @@ export default function CustomerPortalView({ session, onLogout }) {
             );
           })}
         </Box>
-        <Alert severity="info">Esta pantalla muestra los importes registrados en las reservaciones. El historial de movimientos, los comprobantes y las devoluciones requieren integración adicional.</Alert>
+        <Box>
+          <Typography
+            variant="h6"
+            sx={{
+              fontFamily: 'Georgia, serif',
+              color: '#343B32',
+              mb: 2
+            }}
+          >
+            Historial de comprobantes
+          </Typography>
+
+          {customerProofs.length === 0 ? (
+            <Alert severity="info">
+              Todavía no has presentado comprobantes de transferencia.
+            </Alert>
+          ) : (
+            <Stack spacing={2}>
+              {customerProofs.map((proof) => {
+                const payment = customerPayments.find(
+                  (item) => Number(item.id_pago) === Number(proof.id_pago)
+                );
+
+                const amount = payment?.monto_centavos ?? proof.monto_centavos;
+
+                return (
+                  <Paper
+                    key={proof.id_comprobante}
+                    elevation={0}
+                    sx={{
+                      p: 2,
+                      border: '1px solid #E2E5DD',
+                      borderRadius: 2
+                    }}
+                  >
+                    <Stack spacing={1}>
+                      <Stack
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="center"
+                        flexWrap="wrap"
+                        gap={1}
+                      >
+                        <Typography fontWeight={700}>
+                          Comprobante #{proof.id_comprobante}
+                        </Typography>
+
+                        <Chip
+                          size="small"
+                          label={proof.estado}
+                          color={
+                            proof.estado === 'Aprobado'
+                              ? 'success'
+                              : proof.estado === 'Rechazado'
+                                ? 'error'
+                                : 'warning'
+                          }
+                        />
+                      </Stack>
+
+                      <Typography variant="body2">
+                        Reservación #{proof.id_reservacion}
+                      </Typography>
+
+                      <Typography variant="body2" color="text.secondary">
+                        {proof.estado === 'Aprobado' && amount != null
+                          ? `Importe aprobado: ${formatPrice(amount)}`
+                          : 'Importe pendiente de validación'}
+                      </Typography>
+
+                      {proof.estado === 'Rechazado' && (
+                        <Alert severity="error">
+                          <strong>Motivo del rechazo:</strong>{' '}
+                          {proof.motivo_rechazo || 'No disponible'}
+                        </Alert>
+                      )}
+                    </Stack>
+                  </Paper>
+                );
+              })}
+            </Stack>
+          )}
+        </Box>
       </Stack>
     );
   }
@@ -595,6 +861,16 @@ export default function CustomerPortalView({ session, onLogout }) {
           {loading && <LinearProgress sx={{ mb: 2, '& .MuiLinearProgress-bar': { bgcolor: '#68745B' } }} />}
           {loadError && <Alert severity="error" sx={{ mb: 2 }}>{loadError}</Alert>}
 
+          {paymentMessage && (
+            <Alert
+              severity="success"
+              onClose={() => setPaymentMessage('')}
+              sx={{ mb: 2 }}
+            >
+              {paymentMessage}
+            </Alert>
+          )}
+
           {!loading && !loadError && activeSection === 'reservas' && (
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' }, gap: 2, mb: 3 }}>
               {[
@@ -621,8 +897,59 @@ export default function CustomerPortalView({ session, onLogout }) {
             border: '1px solid #E2E5DD', borderRadius: 3, bgcolor: '#FFFFFF', minHeight: 300,
             p: { xs: 2, sm: 3 }
           }}>
-            <Typography variant="h5" sx={{ fontFamily: 'Georgia, serif', color: '#343B32' }}>{activeInfo.label}</Typography>
-            <Typography variant="body2" sx={{ color: '#72796D', mt: 0.5 }}>{activeInfo.description}</Typography>
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              justifyContent="space-between"
+              alignItems={{ xs: 'stretch', sm: 'center' }}
+              spacing={2}
+            >
+              <Box>
+                <Typography
+                  variant="h5"
+                  sx={{
+                    fontFamily: 'Georgia, serif',
+                    color: '#343B32'
+                  }}
+                >
+                  {activeInfo.label}
+                </Typography>
+
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: '#72796D',
+                    mt: 0.5
+                  }}
+                >
+                  {activeInfo.description}
+                </Typography>
+              </Box>
+
+              {activeSection === 'reservas' && (
+                <Button
+                  variant="contained"
+                  onClick={onNewReservation}
+                  startIcon={<Icon name="plus" size={18} />}
+                  sx={{
+                    bgcolor: '#284C40',
+                    color: '#FFFFFF',
+                    borderRadius: 2,
+                    px: 3,
+                    py: 1.2,
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap',
+                    boxShadow: 'none',
+                    '&:hover': {
+                      bgcolor: '#1E3D33',
+                      boxShadow: 'none'
+                    }
+                  }}
+                >
+                  Nueva reservación
+                </Button>
+              )}
+            </Stack>
             {!loading && !loadError && (
               activeSection === 'reservas' ? renderReservations()
                 : activeSection === 'pagos' ? renderPayments()
@@ -636,6 +963,155 @@ export default function CustomerPortalView({ session, onLogout }) {
           </Typography>
         </Box>
       </Box>
+
+      <Dialog
+        open={Boolean(uploadReservation)}
+        onClose={closeProofUpload}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Subir comprobante de transferencia</DialogTitle>
+
+        <DialogContent dividers>
+          <Stack spacing={2}>
+            <Typography variant="body2">
+              Reservación #{uploadReservation?.id}
+            </Typography>
+
+            <Alert severity="info">
+              Adjunta la imagen de tu transferencia bancaria.
+              No necesitas introducir ninguna cantidad.
+              El administrador verificará el importe recibido.
+            </Alert>
+
+            {uploadReservation && (
+              <Stack spacing={1}>
+                <MoneyLine
+                  label="Total contratado"
+                  value={moneyValue(uploadReservation.total_cents)}
+                />
+                <MoneyLine
+                  label="Pagos registrados"
+                  value={moneyValue(uploadReservation.paid_cents)}
+                />
+                <Divider />
+                <MoneyLine
+                  label="Saldo pendiente"
+                  value={Math.max(
+                    moneyValue(uploadReservation.total_cents) -
+                    moneyValue(uploadReservation.paid_cents),
+                    0
+                  )}
+                  strong
+                />
+              </Stack>
+            )}
+
+            <Button
+              component="label"
+              variant="outlined"
+              disabled={uploadingProof}
+              sx={{
+                color: '#526047',
+                borderColor: '#AAB8A1',
+                textTransform: 'none'
+              }}
+            >
+              Seleccionar imagen JPG o PNG
+              <input
+                type="file"
+                accept="image/jpeg,image/png,.jpg,.jpeg,.png"
+                hidden
+                disabled={uploadingProof}
+                onChange={(event) => {
+                  const file = event.target.files?.[0] || null;
+
+                  setProofFile(file);
+                  setPaymentError('');
+
+                  // Permite volver a seleccionar el mismo archivo.
+                  event.target.value = '';
+                }}
+              />
+            </Button>
+
+            {proofFile && (
+              <Stack spacing={2}>
+                <Box
+                  sx={{
+                    border: '1px solid #E2E5DD',
+                    borderRadius: 2,
+                    p: 2,
+                    bgcolor: '#F8F9F6'
+                  }}
+                >
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    Vista previa del comprobante
+                  </Typography>
+
+                  <Box
+                    component="img"
+                    src={proofPreview}
+                    alt="Vista previa del comprobante seleccionado"
+                    sx={{
+                      display: 'block',
+                      width: '100%',
+                      maxHeight: 320,
+                      objectFit: 'contain',
+                      borderRadius: 1
+                    }}
+                  />
+
+                  <Typography
+                    variant="body2"
+                    sx={{ mt: 1, overflowWrap: 'anywhere' }}
+                  >
+                    {proofFile.name}
+                  </Typography>
+                </Box>
+
+                <Button
+                  variant="outlined"
+                  color="error"
+                  disabled={uploadingProof}
+                  onClick={() => {
+                    setProofFile(null);
+                    setPaymentError('');
+                  }}
+                  sx={{ alignSelf: 'flex-start', textTransform: 'none' }}
+                >
+                  Quitar imagen
+                </Button>
+              </Stack>
+            )}
+
+            {paymentError && (
+              <Alert severity="error">{paymentError}</Alert>
+            )}
+          </Stack>
+        </DialogContent>
+
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            onClick={closeProofUpload}
+            disabled={uploadingProof}
+          >
+            Cancelar
+          </Button>
+
+          <Button
+            variant="contained"
+            onClick={handleProofUpload}
+            disabled={!proofFile || uploadingProof}
+            sx={{
+              bgcolor: '#68745B',
+              '&:hover': { bgcolor: '#526047' }
+            }}
+          >
+            {uploadingProof ? 'Enviando...' : 'Enviar comprobante'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <LogoutConfirmDialog
         open={logoutDialogOpen}
@@ -693,7 +1169,11 @@ export default function CustomerPortalView({ session, onLogout }) {
                     </Stack>
                   </Box>
                   {isCancelled(selectedReservation) && <Alert severity="info">Esta reservación fue cancelada. Los importes se conservan como información histórica; el saldo mostrado no representa una solicitud de pago.</Alert>}
-                  <Alert severity="info">Los importes corresponden a los datos registrados en el sistema. Los comprobantes y movimientos detallados requieren integración adicional.</Alert>
+                  <Alert severity="info">
+                    Los importes corresponden a los pagos registrados y aprobados
+                    en el sistema. Puedes consultar el estado de tus comprobantes
+                    en la sección «Mis pagos».
+                  </Alert>
                 </Stack>
               </DialogContent>
               <DialogActions sx={{ p: 2.5 }}>

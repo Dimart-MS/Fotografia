@@ -78,7 +78,11 @@ export default function CustomerLoginView({
         );
       }
 
-      onLoginSuccess({ token, user });
+      onLoginSuccess({
+        token,
+        user,
+        mustChangePassword: Boolean(user.must_change_password)
+      });
     } catch (err) {
       setError(err.message);
     } finally {

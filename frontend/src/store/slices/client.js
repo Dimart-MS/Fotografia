@@ -88,8 +88,10 @@ export function addClient(clientData, accessKey) {
       dispatch(slice.actions.setLoading(true));
 
       const created = await createCliente(clientData, accessKey);
-      dispatch(slice.actions.addClientSuccess(created));
-
+      // La contraseña temporal no debe almacenarse en Redux.
+      const { temporary_password, ...clienteSinContrasena } = created;
+      dispatch(slice.actions.addClientSuccess(clienteSinContrasena));
+      // La contraseña solo se devuelve al flujo que realizó el registro.
       return created;
     } catch (error) {
       const errorMessage =

@@ -144,12 +144,16 @@ export function confirmBookingDeposit(bookingId, amount, accessKey) {
   };
 }
 
-export function cancelPendingBooking(bookingId, accessKey) {
-  return async () => {
+export function cancelPendingBooking(bookingId, motivo, accessKey) {
+  return async (dispatch) => {
     try {
       dispatch(slice.actions.setLoading(true));
 
-      return await cancelarSolicitudReserva(bookingId, accessKey);
+      return await cancelarSolicitudReserva(
+        bookingId,
+        motivo,
+        accessKey
+      );
     } catch (error) {
       const errorMessage =
         error.message || 'Error al cancelar la reserva';

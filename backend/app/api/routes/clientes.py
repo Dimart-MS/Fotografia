@@ -84,7 +84,9 @@ def create_clientes_router(solo_administrador, usuario_autenticado):
                 "El correo ya está registrado",
             )
 
-        return formatear_cliente(cliente)
+        respuesta = formatear_cliente(cliente)
+        respuesta["temporary_password"] = cliente["temporary_password"]
+        return respuesta
 
     @router.patch("/{id_cliente}")
     def actualizar(

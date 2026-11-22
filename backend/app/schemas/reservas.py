@@ -1,7 +1,6 @@
-
 """Validaciones para las operaciones de reservaciones."""
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal
 
@@ -26,4 +25,19 @@ class AnticipoConfirmar(BaseModel):
         gt=0,
         max_digits=9,
         decimal_places=2,
+    )
+
+
+class ProrrogaAnticipoCrear(BaseModel):
+    nueva_fecha_limite: datetime
+    motivo: str = Field(min_length=5, max_length=500)
+
+
+class CancelacionReservaCrear(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    motivo: str = Field(
+        min_length=5,
+        max_length=500,
+        pattern=r".*\S.*",
     )
