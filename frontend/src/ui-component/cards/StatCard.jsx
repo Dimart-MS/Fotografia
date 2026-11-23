@@ -7,14 +7,14 @@ export default function StatCard({ count, label, icon }) {
 
   return (
     <div className="stat">
-      <span className="stat-icon">
-        <Icon name={icon} />
-      </span>
-      <div>
+      <div className="stat-content">
+        <span className="stat-label">{label}</span>
         <strong>{formattedCount}</strong>
-        <span>{label}</span>
       </div>
-      <span className="stat-line" />
+
+      <span className="stat-icon">
+        <Icon name={icon} size={22} />
+      </span>
     </div>
   );
 }

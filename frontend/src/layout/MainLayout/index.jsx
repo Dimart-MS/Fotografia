@@ -111,12 +111,11 @@ export default function MainLayout({ children }) {
                 </Typography>
               </Box>
 
-              {page !== 'inicio' && page !== 'ventas' && (
+              {!['inicio', 'ventas', 'paquetes', 'pagos', 'galerias', 'entregas'].includes(page) && (
                 <Button
                   variant="contained"
                   startIcon={<Icon name="plus" />}
                   onClick={handlePrimaryAction}
-                  disabled={page === 'paquetes'}
                 >
                   {primaryActionLabel}
                 </Button>
@@ -174,7 +173,9 @@ export default function MainLayout({ children }) {
             component="section"
             sx={{
               minWidth: 0,
-              width: '100%'
+              width: '100%',
+              maxWidth: '100%',
+              boxSizing: 'border-box'
             }}
           >
             {children}

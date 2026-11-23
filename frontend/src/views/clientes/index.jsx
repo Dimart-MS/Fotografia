@@ -1,5 +1,10 @@
 import { useState } from 'react';
 import CloseIcon from '@mui/icons-material/Close';
+import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
+import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
+import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
+import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
+import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
 import {
   Avatar,
   Box,
@@ -293,6 +298,7 @@ export default function ClientesView() {
 
               <Box
                 component="input"
+                id="buscador-clientes"
                 type="search"
                 aria-label="Buscar clientes"
                 placeholder="Buscar cliente..."
@@ -302,12 +308,20 @@ export default function ClientesView() {
                   flex: 1,
                   minWidth: 0,
                   width: '100%',
-                  border: 'none',
-                  outline: 'none',
+                  border: '0 !important',
+                  outline: '0 !important',
+                  boxShadow: 'none !important',
+                  WebkitAppearance: 'none',
+                  appearance: 'none',
                   bgcolor: 'transparent',
                   color: '#343B32',
                   fontSize: '14px',
                   fontFamily: 'inherit',
+                  '&:focus, &:focus-visible, &:active': {
+                    border: '0 !important',
+                    outline: '0 !important',
+                    boxShadow: 'none !important'
+                  },
                   '&::placeholder': {
                     color: '#92998E',
                     opacity: 1
@@ -431,7 +445,7 @@ export default function ClientesView() {
                 key={client.id}
                 elevation={0}
                 sx={{
-                  p: 3,
+                  p: 2.5,
                   borderRadius: 3,
                   border: '1px solid #E2E5DD',
                   bgcolor: '#FFFFFF',
@@ -449,7 +463,7 @@ export default function ClientesView() {
                   direction="row"
                   alignItems="center"
                   spacing={2}
-                  sx={{ mb: 2 }}
+                  sx={{ mb: 1.5 }}
                 >
                   <Avatar
                     sx={{
@@ -487,7 +501,7 @@ export default function ClientesView() {
                   </Box>
                 </Stack>
 
-                <Box sx={{ mb: 2 }}>
+                <Box sx={{ mb: 1.5 }}>
                   <Typography
                     variant="caption"
                     color="text.secondary"
@@ -516,7 +530,7 @@ export default function ClientesView() {
                   </Typography>
                 </Box>
 
-                <Box sx={{ mb: 3 }}>
+                <Box sx={{ mb: 2 }}>
                   <Typography
                     variant="caption"
                     color="text.secondary"
@@ -534,12 +548,22 @@ export default function ClientesView() {
 
                 <Box sx={{ flexGrow: 1 }} />
 
-                <Stack spacing={1.5}>
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{ mt: 1 }}
+                >
                   <Button
                     variant="outlined"
                     fullWidth
                     onClick={() => setSelectedClient(client)}
-                    sx={secondaryButtonSx}
+                    sx={{
+                      ...secondaryButtonSx,
+                      minWidth: 0,
+                      minHeight: 38,
+                      px: 1,
+                      fontSize: 12
+                    }}
                   >
                     Ver perfil
                   </Button>
@@ -549,9 +573,14 @@ export default function ClientesView() {
                     fullWidth
                     onClick={() => handleCreateBooking(client)}
                     sx={{
-                      bgcolor: '#68745B',
+                      minWidth: 0,
+                      minHeight: 38,
+                      px: 1,
+                      fontSize: 12,
+                      whiteSpace: 'nowrap',
+                      bgcolor: '#254C41',
                       '&:hover': {
-                        bgcolor: '#59634B'
+                        bgcolor: '#1D3D34'
                       }
                     }}
                   >
@@ -716,8 +745,11 @@ export default function ClientesView() {
               </IconButton>
             </DialogTitle>
 
-            <DialogContent dividers>
-              <Stack spacing={3} sx={{ py: 2 }}>
+            <DialogContent
+              dividers
+              sx={{ px: 3, py: 2.5 }}
+            >
+              <Stack spacing={2.5}>
                 {/* ENCABEZADO DEL PERFIL */}
                 <Stack
                   direction="row"
@@ -774,7 +806,15 @@ export default function ClientesView() {
                     INFORMACIÓN PERSONAL
                   </Typography>
 
-                  <Stack spacing={2.5} sx={{ mt: 2 }}>
+                  <Box
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                      columnGap: 3,
+                      rowGap: 3,
+                      mt: 2
+                    }}
+                  >
                     <ClientDetail
                       icon="hash"
                       label="Identificador"
@@ -799,12 +839,14 @@ export default function ClientesView() {
                       value={selectedClient.phone}
                     />
 
-                    <ClientDetail
-                      icon="map-pin"
-                      label="Dirección"
-                      value={selectedClient.address}
-                    />
-                  </Stack>
+                    <Box sx={{ gridColumn: '1 / -1' }}>
+                      <ClientDetail
+                        icon="map-pin"
+                        label="Dirección"
+                        value={selectedClient.address}
+                      />
+                    </Box>
+                  </Box>
                 </Box>
 
                 <Divider />
@@ -836,16 +878,46 @@ export default function ClientesView() {
 // ==============================|| COMPONENTES AUXILIARES ||============================== //
 
 function ClientDetail({ icon, label, value }) {
+  const detailIcons = {
+    hash: BadgeOutlinedIcon,
+    user: PersonOutlineIcon,
+    mail: EmailOutlinedIcon,
+    phone: PhoneOutlinedIcon,
+    'map-pin': PlaceOutlinedIcon
+  };
+
+  const DetailIcon = detailIcons[icon] || PersonOutlineIcon;
+
   return (
-    <Stack direction="row" spacing={1.5} alignItems="center">
-      <Box sx={{ color: '#68745B' }}>
-        <Icon name={icon} />
+    <Stack
+      direction="row"
+      spacing={1.5}
+      alignItems="flex-start"
+      sx={{ minWidth: 0 }}
+    >
+      <Box
+        sx={{
+          width: 36,
+          height: 36,
+          borderRadius: 2,
+          bgcolor: '#F1F4EE',
+          color: '#526047',
+          display: 'grid',
+          placeItems: 'center',
+          flexShrink: 0
+        }}
+      >
+        <DetailIcon sx={{ fontSize: 19 }} />
       </Box>
 
-      <Box>
+      <Box sx={{ minWidth: 0 }}>
         <Typography
           variant="caption"
-          color="text.secondary"
+          sx={{
+            color: '#7A8277',
+            display: 'block',
+            mb: 0.4
+          }}
         >
           {label}
         </Typography>
@@ -854,7 +926,8 @@ function ClientDetail({ icon, label, value }) {
           variant="body2"
           sx={{
             color: '#343B32',
-            fontWeight: 500
+            fontWeight: 500,
+            overflowWrap: 'anywhere'
           }}
         >
           {value || 'No disponible'}

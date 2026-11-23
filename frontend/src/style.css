@@ -1688,3 +1688,1063 @@ td small {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ==========================================================
+   LUZ & MEMORIA - MEJORA RESPONSIVA DEL SIDEBAR
+   ========================================================== */
+
+/* Mantener las secciones del menú ordenadas */
+.sidebar nav {
+  min-width: 0;
+}
+
+.sidebar-section {
+  min-width: 0;
+}
+
+/* Mejorar la interacción de los botones */
+.sidebar nav button {
+  cursor: pointer;
+  min-width: 0;
+}
+
+/* Adaptación a tabletas y celulares */
+@media (max-width: 760px) {
+
+  .sidebar {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 16px;
+    overflow: hidden;
+  }
+
+  /* Navegación horizontal desplazable */
+  .sidebar nav {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 12px;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 8px 0 12px;
+    margin-top: 12px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  /* Cada sección conserva sus botones */
+  .sidebar-section {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 6px;
+    align-items: center;
+  }
+
+  /* Botones legibles y sin cortes */
+  .sidebar nav button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    min-height: 40px;
+    padding: 10px 12px;
+    font-size: 12px;
+    border-radius: 8px;
+  }
+
+  /* Mantener el contenido dentro de la pantalla */
+  .main-shell {
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
+
+/* ==========================================================
+   LUZ & MEMORIA - SIDEBAR WEB
+   MEJORA VISUAL PARA ESCRITORIO
+   ========================================================== */
+
+@media (min-width: 1101px) {
+
+  .app-shell .sidebar {
+    background: #fffefa;
+    border-right: 1px solid var(--lm-border);
+    padding: 28px 16px 22px;
+  }
+
+  /* Identidad del estudio */
+  .sidebar .brand {
+    padding: 4px 10px 12px;
+    gap: 12px;
+  }
+
+  .sidebar .brand>span {
+    color: var(--lm-primary);
+    font-weight: 700;
+    letter-spacing: -0.4px;
+  }
+
+  /* Títulos de las secciones */
+  .sidebar .workspace-label {
+    margin: 26px 12px 12px;
+    color: var(--lm-text-muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  .sidebar nav {
+    gap: 8px;
+  }
+
+  .sidebar-section {
+    display: grid;
+    gap: 5px;
+  }
+
+  /* Opciones del menú */
+  .sidebar nav button {
+    width: 100%;
+    min-height: 44px;
+    padding: 11px 13px;
+    border-radius: 10px;
+    color: var(--lm-text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease;
+  }
+
+  /* Efecto al pasar el cursor */
+  .sidebar nav button:hover {
+    background: #f0f3ed;
+    color: var(--lm-primary);
+  }
+
+  /* Opción seleccionada */
+  .sidebar nav button.active {
+    background: #e9efe8;
+    color: var(--lm-primary);
+    font-weight: 700;
+  }
+
+  /* Contador de clientes */
+  .sidebar nav button>span {
+    background: #dce8da;
+    color: var(--lm-primary);
+    border-radius: 20px;
+    padding: 3px 8px;
+    font-size: 11px;
+  }
+
+  /* Nota informativa */
+  .sidebar .side-note {
+    background: #f4f6f0;
+    border: 1px solid var(--lm-border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+
+  /* Cerrar sesión */
+  .sidebar .logout {
+    width: 100%;
+    min-height: 42px;
+    border-radius: 10px;
+    padding: 11px 13px;
+    color: var(--lm-text-secondary);
+    cursor: pointer;
+  }
+
+  .sidebar .logout:hover {
+    background: #f8eeee;
+    color: #a65353;
+  }
+}
+
+
+/* ==========================================================
+   LUZ & MEMORIA - SCROLL DEL MENÚ LATERAL
+   ========================================================== */
+
+@media (min-width: 1101px) {
+
+  .app-shell .sidebar {
+    height: 100vh;
+    max-height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    box-sizing: border-box;
+    scrollbar-width: thin;
+    scrollbar-color: #c5d0bf transparent;
+  }
+
+  .app-shell .sidebar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .app-shell .sidebar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .app-shell .sidebar::-webkit-scrollbar-thumb {
+    background: #c5d0bf;
+    border-radius: 10px;
+  }
+
+  .app-shell .sidebar::-webkit-scrollbar-thumb:hover {
+    background: #8fa38b;
+  }
+
+  .app-shell .sidebar .logout {
+    flex-shrink: 0;
+    margin-top: 16px;
+  }
+}
+
+
+/* ==========================================================
+   LUZ & MEMORIA - NAVEGACIÓN COMPACTA DE ESCRITORIO
+   ========================================================== */
+
+@media (min-width: 1101px) {
+
+  /* Menú lateral */
+  .app-shell .sidebar {
+    padding: 20px 16px 16px;
+    gap: 0;
+  }
+
+  /* Logotipo */
+  .sidebar .brand {
+    padding: 0 8px 8px;
+    gap: 9px;
+  }
+
+  /* Etiquetas de las secciones */
+  .sidebar .workspace-label {
+    margin: 14px 10px 6px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+  }
+
+  /* Distribución de las secciones */
+  .sidebar nav {
+    gap: 8px;
+  }
+
+  .sidebar-section {
+    display: grid;
+    gap: 3px;
+  }
+
+  /* Opciones de navegación */
+  .sidebar nav button {
+    min-height: 38px;
+    padding: 8px 11px;
+    gap: 10px;
+    border-radius: 9px;
+    font-size: 12.5px;
+    font-weight: 500;
+  }
+
+  /* Opción activa */
+  .sidebar nav button.active {
+    background: #e9efe8;
+    color: #254c41;
+    font-weight: 650;
+  }
+
+  /* Contador */
+  .sidebar nav button>span {
+    padding: 2px 7px;
+    font-size: 10px;
+  }
+
+  /* Nota de operación */
+  .sidebar .side-note {
+    margin-top: 14px;
+    padding: 11px 12px;
+    border-radius: 10px;
+  }
+
+  .sidebar .side-note p {
+    font-size: 11px;
+    line-height: 1.45;
+  }
+
+  /* Cerrar sesión */
+  .sidebar .logout {
+    min-height: 38px;
+    margin-top: 10px;
+    padding: 8px 11px;
+    font-size: 12px;
+  }
+}
+
+
+/* ==========================================================
+   LUZ & MEMORIA - TARJETAS DEL DASHBOARD (ESCRITORIO)
+   ========================================================== */
+
+@media (min-width: 1101px) {
+
+  /* Distribución de los cuatro indicadores */
+  .dashboard-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  /* Tarjeta */
+  .dashboard-stats .stat {
+    min-width: 0;
+    min-height: 142px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    background: #fffefa;
+    border: 1px solid #e3e6de;
+    border-radius: 13px;
+    box-shadow: 0 3px 12px rgba(37, 76, 65, 0.035);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .dashboard-stats .stat:hover {
+    border-color: #c7d4c5;
+    box-shadow: 0 5px 16px rgba(37, 76, 65, 0.07);
+  }
+
+  /* Icono */
+  .dashboard-stats .stat-icon {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    background: #edf2e9;
+    color: #254c41;
+  }
+
+  /* Número del indicador */
+  .dashboard-stats .stat strong {
+    display: block;
+    margin-bottom: 5px;
+    color: #254c41;
+    font-family: Georgia, serif;
+    font-size: 29px;
+    font-weight: 500;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Descripción */
+  .dashboard-stats .stat div>span {
+    display: block;
+    color: #667064;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  /* Eliminar línea decorativa innecesaria */
+  .dashboard-stats .stat-line {
+    display: none;
+  }
+}
+
+
+/* ==========================================================
+   LUZ & MEMORIA - EQUILIBRIO VISUAL DEL DASHBOARD
+   ========================================================== */
+
+@media (min-width: 1101px) {
+
+  /* La tarjeta lateral ya no se estira
+     hasta alcanzar la altura de la tabla */
+  .overview-grid {
+    align-items: start;
+    gap: 20px;
+  }
+
+  /* Próxima cobertura confirmada */
+  .overview-grid>.next-card {
+    align-self: start;
+    height: auto;
+    min-height: 0;
+    padding: 24px;
+    border-radius: 16px;
+  }
+
+  /* Título del evento */
+  .overview-grid>.next-card h2 {
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+
+  /* Espaciado del contenido */
+  .overview-grid>.next-card p {
+    line-height: 1.5;
+  }
+
+  /* Panel de próximos eventos */
+  .overview-grid>.panel {
+    min-width: 0;
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  /* Panel de estado de reservaciones */
+  .dashboard-status-panel {
+    border-radius: 16px;
+  }
+}
+
+
+/* ==========================================================
+   LUZ & MEMORIA - TABLA COMPACTA DEL DASHBOARD
+   SOLO ESCRITORIO
+   ========================================================== */
+
+@media (min-width: 1101px) {
+
+  /* Espaciado de las celdas */
+  .overview-grid>.panel .table-scroll th {
+    padding: 12px 16px;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+  }
+
+  .overview-grid>.panel .table-scroll td {
+    padding: 13px 16px;
+    vertical-align: middle;
+    line-height: 1.4;
+  }
+
+  /* Nombres de clientes */
+  .overview-grid>.panel .table-scroll td strong {
+    font-size: 12.5px;
+    line-height: 1.4;
+  }
+
+  /* Información secundaria */
+  .overview-grid>.panel .table-scroll td small {
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  /* Interacción visual discreta */
+  .overview-grid>.panel .table-scroll tbody tr {
+    transition: background-color 0.15s ease;
+  }
+
+  .overview-grid>.panel .table-scroll tbody tr:hover {
+    background-color: #f8faf6;
+  }
+}
+
+
+/* ==========================================================
+   LUZ & MEMORIA - ESTADO DE RESERVACIONES COMPACTO
+   SOLO ESCRITORIO
+   ========================================================== */
+
+@media (min-width: 1101px) {
+
+  .dashboard-status-panel {
+    padding-bottom: 20px;
+  }
+
+  .dashboard-status-list {
+    gap: 16px;
+    padding: 6px 24px;
+  }
+
+  .dashboard-status-item {
+    min-width: 0;
+  }
+
+  .dashboard-progress-track {
+    border-radius: 20px;
+    overflow: hidden;
+  }
+
+  .dashboard-progress-fill {
+    border-radius: 20px;
+  }
+}
+
+/* ==========================================================
+   LUZ & MEMORIA - REFINAMIENTO DEL MENÚ LATERAL
+   SOLO ESCRITORIO
+   ========================================================== */
+
+@media (min-width: 1101px) {
+
+  .sidebar {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd6c9 transparent;
+  }
+
+  .sidebar::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .sidebar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .sidebar::-webkit-scrollbar-thumb {
+    background: #cbd6c9;
+    border-radius: 10px;
+  }
+
+  .sidebar nav {
+    gap: 12px;
+  }
+
+  .sidebar-section {
+    gap: 4px;
+  }
+
+  .sidebar nav button {
+    min-height: 39px;
+    border-radius: 10px;
+    transition:
+      background-color 0.18s ease,
+      color 0.18s ease;
+  }
+
+  .sidebar nav button:hover {
+    background: #f0f3ed;
+    color: #254c41;
+  }
+
+  .sidebar nav button.active,
+  .sidebar nav button.active:hover {
+    background: #e8efe7;
+    color: #254c41;
+    font-weight: 650;
+  }
+
+  .sidebar .side-note {
+    background: #f3f5ee;
+    border: 1px solid #e2e8dc;
+  }
+
+  .sidebar .logout {
+    border-radius: 10px;
+    transition:
+      background-color 0.18s ease,
+      color 0.18s ease;
+  }
+
+  .sidebar .logout:hover {
+    background: #f0f3ed;
+    color: #254c41;
+  }
+}
+
+
+/* ==========================================================
+   LUZ & MEMORIA - INDICADORES UNIFICADOS CON CLIENTES
+   ========================================================== */
+
+.dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+/* Tarjeta principal */
+.dashboard-stats .stat {
+  min-width: 0;
+  min-height: 132px;
+  margin: 0;
+  padding: 24px;
+
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+
+  background: #ffffff;
+  border: 1px solid #e2e5dd;
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+/* Contenedor del texto */
+.dashboard-stats .stat-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  flex: 1;
+}
+
+/* Descripción */
+.dashboard-stats .stat-label {
+  color: #72796d;
+  font-family: 'Inter', Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+/* Número principal */
+.dashboard-stats .stat-content strong {
+  display: block;
+  margin: 12px 0 0;
+
+  color: #354337;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Icono a la derecha */
+.dashboard-stats .stat-icon {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+
+  display: grid;
+  place-items: center;
+
+  background: #e9ede4;
+  color: #68745b;
+  border-radius: 8px;
+}
+
+/* Quitar la línea decorativa anterior */
+.dashboard-stats .stat-line {
+  display: none;
+}
+
+/* Diseño adaptable */
+@media (max-width: 1200px) {
+  .dashboard-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .dashboard-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-stats .stat {
+    min-height: 120px;
+    padding: 20px;
+  }
+}
+
+
+/* ==========================================================
+   LUZ & MEMORIA - TABLA DE VISTA GENERAL
+   DISEÑO UNIFICADO CON CLIENTES
+   ========================================================== */
+
+/* Contenedor principal */
+.overview-grid>.panel {
+  background: #ffffff;
+  border: 1px solid #e2e5dd;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+/* Encabezado de la sección */
+.overview-grid>.panel .section-heading {
+  padding: 24px;
+  gap: 16px;
+  background: #ffffff;
+}
+
+.overview-grid>.panel .section-heading h2 {
+  color: #343b32;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: -0.3px;
+  line-height: 1.3;
+}
+
+.overview-grid>.panel .section-heading p {
+  color: #72796d;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Tabla */
+.overview-grid>.panel .table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.overview-grid>.panel .table-scroll table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+
+/* Encabezados de columnas */
+.overview-grid>.panel .table-scroll th {
+  padding: 16px;
+  background: #f1f4ee;
+  border-bottom: 1px solid #e2e5dd;
+
+  color: #68745b;
+  font-family: 'Inter', Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Filas */
+.overview-grid>.panel .table-scroll td {
+  padding: 18px 16px;
+  border-bottom: 1px solid #edf0e9;
+
+  color: #343b32;
+  font-family: 'Inter', Arial, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  vertical-align: middle;
+}
+
+/* Efecto al pasar el cursor */
+.overview-grid>.panel .table-scroll tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.overview-grid>.panel .table-scroll tbody tr:hover {
+  background: #f8faf6;
+}
+
+/* Última fila sin borde inferior */
+.overview-grid>.panel .table-scroll tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Nombre del cliente */
+.overview-grid>.panel .table-scroll td strong {
+  color: #354337;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+/* Información secundaria */
+.overview-grid>.panel .table-scroll td small {
+  color: #72796d;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* Importes y datos de pago */
+.overview-grid>.panel .table-scroll td .MuiTypography-root {
+  line-height: 1.5;
+}
+
+/* Botón de acciones */
+.overview-grid>.panel .table-scroll .MuiIconButton-root {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  color: #526047;
+}
+
+.overview-grid>.panel .table-scroll .MuiIconButton-root:hover {
+  background: #e9ede4;
+}
+
+/* Evitar que la tabla pierda legibilidad en pantallas estrechas */
+@media (max-width: 1100px) {
+  .overview-grid>.panel .table-scroll table {
+    min-width: 850px;
+  }
+}
+
+
+/* ==========================================================
+   LUZ & MEMORIA - UNIFICACION VISUAL DEL DASHBOARD
+   TARJETA DE COBERTURA Y ESTADO DE RESERVACIONES
+   ========================================================== */
+
+/* PROXIMA COBERTURA CONFIRMADA */
+
+.overview-grid>.next-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E5DD;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: none;
+  color: #343B32;
+}
+
+.overview-grid>.next-card>.eyebrow {
+  color: #68745B;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  line-height: 1.5;
+}
+
+.overview-grid>.next-card>svg {
+  width: 44px;
+  height: 44px;
+  padding: 11px;
+  box-sizing: border-box;
+  background: #E9EDE4;
+  color: #68745B;
+  border-radius: 10px;
+  margin-top: 16px;
+  margin-bottom: 14px;
+}
+
+.overview-grid>.next-card h2 {
+  color: #354337;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: -0.4px;
+  margin-bottom: 12px;
+}
+
+.overview-grid>.next-card p {
+  color: #72796D;
+  font-size: 13px;
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+
+.overview-grid>.next-card .MuiChip-root {
+  background: #E9EDE4;
+  color: #526047;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.overview-grid>.next-card .MuiButton-root {
+  color: #526047;
+  border: 1px solid #B7C4AD;
+  border-radius: 10px;
+  min-height: 42px;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: none;
+  box-shadow: none;
+}
+
+.overview-grid>.next-card .MuiButton-root:hover {
+  background: #F1F4EE;
+  border-color: #68745B;
+  box-shadow: none;
+}
+
+/* ESTADO DE RESERVACIONES */
+
+.dashboard-status-panel {
+  background: #FFFFFF;
+  border: 1px solid #E2E5DD;
+  border-radius: 16px;
+  box-shadow: none;
+  overflow: hidden;
+  padding-bottom: 26px;
+}
+
+.dashboard-status-panel .section-heading {
+  padding: 24px 26px 18px;
+}
+
+.dashboard-status-panel .section-heading .eyebrow {
+  color: #68745B;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+}
+
+.dashboard-status-panel .section-heading h2 {
+  color: #354337;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: -0.4px;
+  line-height: 1.3;
+}
+
+.dashboard-status-panel .section-heading p {
+  color: #72796D;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.dashboard-status-panel .dashboard-status-list {
+  gap: 20px;
+  padding: 8px 26px;
+}
+
+.dashboard-status-panel .dashboard-status-label {
+  color: #72796D;
+  font-size: 13px;
+  font-weight: 400;
+  margin-bottom: 10px;
+}
+
+.dashboard-status-panel .dashboard-status-label strong {
+  color: #354337;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.dashboard-status-panel .dashboard-progress-track {
+  height: 9px;
+  background: #E9EDE4;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.dashboard-status-panel .dashboard-progress-fill {
+  height: 100%;
+  border-radius: 20px;
+}
+
+/* AJUSTES RESPONSIVOS */
+
+@media (max-width: 760px) {
+  .overview-grid>.next-card {
+    padding: 20px;
+  }
+
+  .overview-grid>.next-card h2 {
+    font-size: 22px;
+  }
+
+  .dashboard-status-panel .section-heading {
+    padding: 20px 20px 14px;
+  }
+
+  .dashboard-status-panel .dashboard-status-list {
+    padding: 8px 20px;
+  }
+}
+
+/* Buscador de clientes: eliminar contorno interior */
+.app-shell #buscador-clientes:focus,
+.app-shell #buscador-clientes:focus-visible {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+
+/* ==========================================
+   AGENDA Y RESERVAS - ESTILO VISUAL
+   ========================================== */
+
+/* Navegación del calendario */
+.app-shell .calendar-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-shell .calendar-nav button {
+  min-width: 38px;
+  min-height: 38px;
+  padding: 8px 12px;
+  border: 1px solid #E2E5DD;
+  border-radius: 10px;
+  background: #FFFFFF;
+  color: #526047;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.app-shell .calendar-nav button:hover {
+  background: #F1F4EE;
+  border-color: #AAB8A1;
+}
+
+/* Distribución del calendario */
+.app-shell .calendar-grid {
+  gap: 8px;
+}
+
+/* Encabezados de días */
+.app-shell .calendar-grid .weekday {
+  font-size: 12px;
+  font-weight: 600;
+  color: #72796D;
+  padding: 12px 4px;
+}
+
+/* Días del calendario */
+.app-shell .calendar-day {
+  min-height: 75px;
+  padding: 12px;
+  border: 1px solid #E2E5DD;
+  border-radius: 12px;
+  background: #FFFFFF;
+  color: #354337;
+  font-size: 13px;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+/* Días disponibles */
+.app-shell .calendar-day:not(:disabled):hover {
+  background: #F1F4EE;
+  border-color: #AAB8A1;
+}
+
+/* Días ocupados */
+.app-shell .calendar-day.occupied {
+  background: #E9EDE4;
+  border-color: #DCE5D6;
+  color: #526047;
+}
+
+/* Día actual */
+.app-shell .calendar-day.today {
+  border: 1.5px solid #68745B;
+}
+
+/* Etiquetas dentro de los días */
+.app-shell .calendar-day small {
+  font-size: 10px;
+  font-weight: 500;
+}
+
+/* Adaptación a pantallas pequeñas */
+@media (max-width: 760px) {
+  .app-shell .calendar-grid {
+    gap: 4px;
+  }
+
+  .app-shell .calendar-day {
+    min-height: 56px;
+    padding: 7px 5px;
+    font-size: 11px;
+  }
+
+  .app-shell .calendar-day small {
+    font-size: 9px;
+  }
+}

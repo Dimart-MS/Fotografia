@@ -489,184 +489,275 @@ export default function GaleriasView() {
 
   return (
     <>
-      <section className="panel">
-        <Stack
-          direction={{ xs: 'column', md: 'row' }}
-          justifyContent="space-between"
-          alignItems={{ xs: 'stretch', md: 'center' }}
-          spacing={2}
-          sx={{ mb: 3 }}
-        >
-          <Box>
-            <Typography
-              variant="h5"
-              sx={{ color: '#343B32', fontFamily: 'Georgia, serif' }}
-            >
-              Galerías y fotografías
-            </Typography>
-
-            <Typography variant="body2" color="text.secondary">
-              Organiza y administra el material fotográfico y audiovisual de los eventos.
-            </Typography>
-          </Box>
-
-          <Button
-            variant="contained"
-            startIcon={<Icon name="plus" />}
-            onClick={abrirNueva}
-            sx={{
-              bgcolor: '#68745B',
-              '&:hover': { bgcolor: '#59634B' }
-            }}
-          >
-            Nueva galería
-          </Button>
-        </Stack>
-
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 3 }}>
-          <Box sx={{ flex: 1, p: 2, borderRadius: 2, bgcolor: '#F8F6F0' }}>
-            <Typography variant="caption" color="text.secondary">
-              Total de galerías
-            </Typography>
-            <Typography variant="h5" sx={{ color: '#343B32' }}>
-              {galerias.length}
-            </Typography>
-          </Box>
-
-          <Box sx={{ flex: 1, p: 2, borderRadius: 2, bgcolor: '#EEF0E9' }}>
-            <Typography variant="caption" color="text.secondary">
-              Galerías publicadas
-            </Typography>
-            <Typography variant="h5" sx={{ color: '#68745B' }}>
-              {publicadas}
-            </Typography>
-          </Box>
-
-          <Box sx={{ flex: 1, p: 2, borderRadius: 2, bgcolor: '#F8F6F0' }}>
-            <Typography variant="caption" color="text.secondary">
-              Fotografías registradas
-            </Typography>
-            <Typography variant="h5" sx={{ color: '#343B32' }}>
-              {galerias.reduce(
-                (total, g) => total + Number(g.total_fotografias || 0), 0
-              )}
-            </Typography>
-          </Box>
-        </Stack>
-
-        <TextField
-          fullWidth
-          size="small"
-          placeholder="Buscar galería por título, descripción o reservación..."
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-          sx={{ mb: 3 }}
-        />
-
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-
-        {cargando ? (
-          <Typography color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
-            Cargando galerías...
-          </Typography>
-        ) : galeriasFiltradas.length === 0 ? (
-          <EmptyState
-            icon="image"
-            title="No hay galerías para mostrar"
-            description={
-              busqueda
-                ? 'Prueba con otro término de búsqueda.'
-                : 'Registra la primera galería del estudio.'
+      <Box sx={{ py: 1 }}>
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mb: 3 }}>
+          {[
+            { titulo: 'Total de galerías', valor: galerias.length, icono: 'image' },
+            { titulo: 'Galerías publicadas', valor: publicadas, icono: 'globe' },
+            {
+              titulo: 'Fotografías registradas',
+              valor: galerias.reduce((total, g) => total + Number(g.total_fotografias || 0), 0),
+              icono: 'image'
             }
-            actionLabel={!busqueda ? 'Crear galería' : undefined}
-            onAction={!busqueda ? abrirNueva : undefined}
-          />
-        ) : (
-          <Box sx={{ overflowX: 'auto' }}>
-            <Box sx={{ minWidth: 750 }}>
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: '2fr 1fr 1fr 1.2fr',
-                  gap: 2,
-                  p: 1.5,
-                  bgcolor: '#F8F6F0',
-                  borderRadius: 2,
-                  mb: 1
-                }}
-              >
-                {['Galería', 'Reservación', 'Estado', 'Acciones'].map((t) => (
-                  <Typography
-                    key={t}
-                    variant="caption"
-                    fontWeight={700}
-                    color="#68745B"
-                  >
-                    {t}
-                  </Typography>
-                ))}
-              </Box>
-
-              {galeriasFiltradas.map((galeria) => (
-                <Box
-                  key={galeria.id}
+          ].map((tarjeta) => (
+            <Box
+              key={tarjeta.titulo}
+              sx={{
+                flex: 1,
+                minWidth: 0,
+                p: 3,
+                bgcolor: '#FFFFFF',
+                border: '1px solid #E2E5DD',
+                borderRadius: '26px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                gap: 2
+              }}
+            >
+              <Box sx={{ minWidth: 0 }}>
+                <Typography sx={{ color: '#72796D', fontSize: 13, fontWeight: 600, mb: 1.5 }}>
+                  {tarjeta.titulo}
+                </Typography>
+                <Typography
                   sx={{
-                    display: 'grid',
-                    gridTemplateColumns: '2fr 1fr 1fr 1.2fr',
-                    gap: 2,
-                    alignItems: 'center',
-                    p: 1.5,
-                    borderBottom: '1px solid #EAE8E0'
+                    color: '#254C41',
+                    fontFamily: 'Georgia, serif',
+                    fontSize: { xs: 30, md: 36 },
+                    fontWeight: 600,
+                    lineHeight: 1.15,
+                    fontVariantNumeric: 'tabular-nums'
                   }}
                 >
-                  <Box>
-                    <Typography fontWeight={600} color="#343B32">
-                      {galeria.titulo}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {galeria.descripcion || 'Sin descripción'}
-                    </Typography>
-                  </Box>
-
-                  <Typography variant="body2">
-                    #{galeria.reservacion || '—'}
-                  </Typography>
-
-                  <Chip
-                    size="small"
-                    label={galeria.publicada ? 'Publicada' : 'Oculta'}
-                    color={galeria.publicada ? 'success' : 'default'}
-                    variant="outlined"
-                  />
-
-                  <Stack direction="row" spacing={0.5}>
-                    <IconButton
-                      size="small"
-                      title="Ver galería"
-                      onClick={() => abrirDetalle(galeria)}
-                    >
-                      <Icon name="eye" />
-                    </IconButton>
-
-                    <IconButton
-                      size="small"
-                      title={galeria.publicada ? 'Ocultar' : 'Publicar'}
-                      onClick={() => actualizarEstado(galeria)}
-                      color={galeria.publicada ? 'warning' : 'success'}
-                    >
-                      <Icon name={galeria.publicada ? 'eye-off' : 'globe'} />
-                    </IconButton>
-                  </Stack>
-                </Box>
-              ))}
+                  {tarjeta.valor}
+                </Typography>
+              </Box>
+              <Box
+                sx={{
+                  flexShrink: 0,
+                  width: 48,
+                  height: 48,
+                  borderRadius: '14px',
+                  bgcolor: '#E9EDE4',
+                  color: '#68745B',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <Icon name={tarjeta.icono} />
+              </Box>
             </Box>
-          </Box>
-        )}
-      </section>
+          ))}
+        </Stack>
+
+        <Box
+          sx={{
+            p: { xs: 2, md: 3 },
+            bgcolor: '#FFFFFF',
+            border: '1px solid #E2E5DD',
+            borderRadius: '26px'
+          }}
+        >
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            justifyContent="space-between"
+            alignItems={{ xs: 'stretch', sm: 'center' }}
+            spacing={2}
+            sx={{ mb: 3 }}
+          >
+            <Box>
+              <Typography variant="h5" sx={{ color: '#343B32', fontFamily: 'Georgia, serif' }}>
+                Galerías registradas
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#72796D', mt: 0.5 }}>
+                {galeriasFiltradas.length} de {galerias.length} galerías
+              </Typography>
+            </Box>
+            <Button
+              variant="contained"
+              startIcon={<Icon name="plus" />}
+              onClick={abrirNueva}
+              sx={{
+                bgcolor: '#68745B',
+                borderRadius: '12px',
+                textTransform: 'none',
+                fontWeight: 600,
+                '&:hover': { bgcolor: '#59634B' }
+              }}
+            >
+              Nueva galería
+            </Button>
+          </Stack>
+
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Buscar galería por título, descripción o reservación..."
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            sx={{
+              mb: 3,
+              '& .MuiOutlinedInput-root': {
+                minHeight: 46,
+                borderRadius: '12px',
+                bgcolor: '#FFFFFF',
+                '& fieldset': { borderColor: '#DCE2D8' },
+                '&:hover fieldset': { borderColor: '#AAB8A1' },
+                '&.Mui-focused fieldset': { borderColor: '#254C41', borderWidth: '1px' },
+                '& input': {
+                  border: 'none !important',
+                  outline: 'none !important',
+                  boxShadow: 'none !important',
+                  background: 'transparent !important'
+                }
+              }
+            }}
+            InputProps={{
+              startAdornment: (
+                <Box sx={{ display: 'flex', color: '#72796D', mr: 1 }}>
+                  <Icon name="search" />
+                </Box>
+              )
+            }}
+          />
+
+          {error && (
+            <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
+              {error}
+            </Alert>
+          )}
+
+          {cargando ? (
+            <Typography color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
+              Cargando galerías...
+            </Typography>
+          ) : galeriasFiltradas.length === 0 ? (
+            <EmptyState
+              icon="image"
+              title="No hay galerías para mostrar"
+              description={
+                busqueda
+                  ? 'Prueba con otro término de búsqueda.'
+                  : 'Registra la primera galería del estudio.'
+              }
+              actionLabel={!busqueda ? 'Crear galería' : undefined}
+              onAction={!busqueda ? abrirNueva : undefined}
+            />
+          ) : (
+            <Box sx={{ overflowX: 'auto', border: '1px solid #E2E5DD', borderRadius: '14px' }}>
+              <Box sx={{ minWidth: 820 }}>
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: 'minmax(190px, 2fr) minmax(110px, 1fr) minmax(105px, 1fr) minmax(240px, 1.6fr)',
+                    gap: 2,
+                    px: 2,
+                    py: 2,
+                    bgcolor: '#F5F6F2',
+                    borderBottom: '1px solid #E2E5DD'
+                  }}
+                >
+                  {['GALERÍA', 'RESERVACIÓN', 'ESTADO', 'ACCIONES'].map((t) => (
+                    <Typography key={t} sx={{ fontSize: 12, fontWeight: 700, color: '#68745B' }}>
+                      {t}
+                    </Typography>
+                  ))}
+                </Box>
+
+                {galeriasFiltradas.map((galeria) => (
+                  <Box
+                    key={galeria.id}
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: 'minmax(190px, 2fr) minmax(110px, 1fr) minmax(105px, 1fr) minmax(240px, 1.6fr)',
+                      gap: 2,
+                      alignItems: 'center',
+                      px: 2,
+                      py: 2,
+                      borderBottom: '1px solid #EAE8E0',
+                      '&:last-child': { borderBottom: 0 },
+                      '&:hover': { bgcolor: '#FAFBF8' }
+                    }}
+                  >
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography fontWeight={600} color="#343B32">
+                        {galeria.titulo}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#72796D' }}>
+                        {galeria.descripcion || 'Sin descripción'}
+                      </Typography>
+                    </Box>
+                    <Typography variant="body2" sx={{ color: '#343B32' }}>
+                      #{galeria.reservacion || '—'}
+                    </Typography>
+                    <Box>
+                      <Chip
+                        size="small"
+                        label={galeria.publicada ? 'Publicada' : 'Oculta'}
+                        sx={{
+                          bgcolor: galeria.publicada ? '#E8F0E2' : '#F1F1ED',
+                          color: galeria.publicada ? '#3B5C30' : '#72796D',
+                          fontWeight: 700,
+                          borderRadius: '8px'
+                        }}
+                      />
+                    </Box>
+                    <Stack direction="row" spacing={1.2} alignItems="center">
+                      <Button
+                        size="small"
+                        variant="contained"
+                        onClick={() => abrirDetalle(galeria)}
+                        sx={{
+                          bgcolor: '#254C40',
+                          color: '#FFFFFF',
+                          borderRadius: '10px',
+                          textTransform: 'none',
+                          fontWeight: 600,
+                          fontSize: 13,
+                          px: 2.5,
+                          py: 1,
+                          boxShadow: 'none',
+                          whiteSpace: 'nowrap',
+                          '&:hover': {
+                            bgcolor: '#1D3D33',
+                            boxShadow: 'none'
+                          }
+                        }}
+                      >
+                        Ver galería
+                      </Button>
+
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => actualizarEstado(galeria)}
+                        sx={{
+                          color: '#254C40',
+                          borderColor: '#A9BCA8',
+                          borderRadius: '10px',
+                          textTransform: 'none',
+                          fontWeight: 600,
+                          fontSize: 13,
+                          px: 2.5,
+                          py: 1,
+                          whiteSpace: 'nowrap',
+                          '&:hover': {
+                            bgcolor: '#F2F6F1',
+                            borderColor: '#254C40'
+                          }
+                        }}
+                      >
+                        {galeria.publicada ? 'Ocultar' : 'Publicar'}
+                      </Button>
+                    </Stack>
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          )}
+        </Box>
+      </Box>
 
       {/* DIÁLOGO PARA CREAR GALERÍA */}
       <Dialog
@@ -674,14 +765,23 @@ export default function GaleriasView() {
         onClose={cerrarDialogo}
         fullWidth
         maxWidth="sm"
+        slotProps={{ paper: { sx: { borderRadius: '24px' } } }}
       >
         <Box component="form" onSubmit={guardarGaleria}>
-          <DialogTitle sx={{ color: '#343B32', fontFamily: 'Georgia, serif' }}>
-            Registrar nueva galería
+          <DialogTitle sx={{ px: 3, pt: 3, pb: 1 }}>
+            <Typography variant="overline" sx={{ color: '#68745B', fontWeight: 700, letterSpacing: 2 }}>
+              LUZ &amp; MEMORIA
+            </Typography>
+            <Typography sx={{ color: '#343B32', fontFamily: 'Georgia, serif', fontSize: 26, fontWeight: 600 }}>
+              Registrar nueva galería
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#72796D', mt: 0.5 }}>
+              Asocia el material fotográfico y audiovisual a una reservación.
+            </Typography>
           </DialogTitle>
 
-          <DialogContent>
-            <Stack spacing={2.5} sx={{ pt: 1 }}>
+          <DialogContent sx={{ px: 3, pt: '16px !important' }}>
+            <Stack spacing={2.5} sx={{ pt: 1, '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}>
               {error && <Alert severity="error">{error}</Alert>}
 
               <TextField
@@ -713,8 +813,8 @@ export default function GaleriasView() {
             </Stack>
           </DialogContent>
 
-          <DialogActions sx={{ p: 3 }}>
-            <Button onClick={cerrarDialogo} disabled={guardando}>
+          <DialogActions sx={{ px: 3, py: 2.5, borderTop: '1px solid #E2E5DD' }}>
+            <Button onClick={cerrarDialogo} disabled={guardando} sx={{ textTransform: 'none', color: '#68745B' }}>
               Cancelar
             </Button>
 
@@ -723,6 +823,8 @@ export default function GaleriasView() {
               variant="contained"
               disabled={guardando}
               sx={{
+                borderRadius: '12px',
+                textTransform: 'none',
                 bgcolor: '#68745B',
                 '&:hover': { bgcolor: '#59634B' }
               }}
@@ -739,17 +841,49 @@ export default function GaleriasView() {
         onClose={() => !subiendo && setGaleriaSeleccionada(null)}
         fullWidth
         maxWidth="md"
+        PaperProps={{
+          sx: {
+            borderRadius: '22px',
+            bgcolor: '#FFFEFB',
+            border: '1px solid #E4E8DE',
+            boxShadow: '0 20px 60px rgba(35, 52, 40, 0.12)',
+            overflow: 'hidden'
+          }
+        }}
       >
         {galeriaSeleccionada && (
           <>
-            <DialogTitle sx={{ color: '#343B32', fontFamily: 'Georgia, serif' }}>
-              {galeriaSeleccionada.titulo}
-              <Typography variant="body2" color="text.secondary">
+            <DialogTitle
+              sx={{
+                px: 3.5,
+                pt: 3,
+                pb: 2,
+                borderBottom: '1px solid #E5E9E1'
+              }}
+            >
+              <Typography
+                sx={{
+                  fontFamily: 'Georgia, serif',
+                  fontSize: { xs: 25, sm: 30 },
+                  fontWeight: 600,
+                  color: '#343B32'
+                }}
+              >
+                {galeriaSeleccionada.titulo}
+              </Typography>
+
+              <Typography
+                sx={{
+                  color: '#788174',
+                  fontSize: 13,
+                  mt: 0.5
+                }}
+              >
                 Reservación #{galeriaSeleccionada.reservacion || galeriaSeleccionada.id_reservacion}
               </Typography>
             </DialogTitle>
 
-            <DialogContent>
+            <DialogContent sx={{ px: 3 }}>
               <Stack spacing={3} sx={{ pt: 1 }}>
                 {error && <Alert severity="error">{error}</Alert>}
 
@@ -757,15 +891,24 @@ export default function GaleriasView() {
                   {galeriaSeleccionada.descripcion || 'Sin descripción.'}
                 </Typography>
 
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
                   <Button
                     component="label"
                     variant="contained"
                     disabled={subiendo}
-                    startIcon={<Icon name="upload" />}
                     sx={{
-                      bgcolor: '#68745B',
-                      '&:hover': { bgcolor: '#59634B' }
+                      bgcolor: '#254C40',
+                      color: '#FFFFFF',
+                      textTransform: 'none',
+                      borderRadius: '10px',
+                      fontWeight: 600,
+                      px: 3,
+                      py: 1.2,
+                      boxShadow: 'none',
+                      '&:hover': {
+                        bgcolor: '#1D3D33',
+                        boxShadow: 'none'
+                      }
                     }}
                   >
                     {subiendo ? 'Subiendo...' : 'Subir fotografías'}
@@ -780,9 +923,21 @@ export default function GaleriasView() {
 
                   <Button
                     variant="outlined"
-                    startIcon={<Icon name="video" />}
                     onClick={abrirDialogoVideo}
                     disabled={subiendo}
+                    sx={{
+                      color: '#254C40',
+                      borderColor: '#A9BCA8',
+                      textTransform: 'none',
+                      borderRadius: '10px',
+                      fontWeight: 600,
+                      px: 3,
+                      py: 1.2,
+                      '&:hover': {
+                        bgcolor: '#F2F6F1',
+                        borderColor: '#254C40'
+                      }
+                    }}
                   >
                     Agregar video
                   </Button>
@@ -822,23 +977,46 @@ export default function GaleriasView() {
                             </Typography>
                           </Box>
 
-                          <Stack direction="row" spacing={1}>
-                            <IconButton
-                              title="Descargar fotografía"
+                          <Stack direction="row" spacing={1} alignItems="center">
+                            <Button
+                              size="small"
+                              variant="outlined"
                               onClick={() => descargar(foto)}
                               disabled={subiendo}
+                              sx={{
+                                color: '#254C40',
+                                borderColor: '#A9BCA8',
+                                textTransform: 'none',
+                                borderRadius: '8px',
+                                fontWeight: 600,
+                                px: 2,
+                                '&:hover': {
+                                  bgcolor: '#F2F6F1',
+                                  borderColor: '#254C40'
+                                }
+                              }}
                             >
-                              <Icon name="download" />
-                            </IconButton>
+                              Descargar
+                            </Button>
 
-                            <IconButton
-                              title="Eliminar fotografía"
+                            <Button
+                              size="small"
+                              variant="text"
                               color="error"
                               onClick={() => eliminarFoto(foto)}
                               disabled={subiendo}
+                              sx={{
+                                textTransform: 'none',
+                                borderRadius: '8px',
+                                fontWeight: 600,
+                                px: 2,
+                                '&:hover': {
+                                  bgcolor: '#FFF1F0'
+                                }
+                              }}
                             >
-                              <Icon name="trash-2" />
-                            </IconButton>
+                              Eliminar
+                            </Button>
                           </Stack>
                         </Box>
                       ))}
@@ -874,25 +1052,25 @@ export default function GaleriasView() {
                             }}
                           >
                             <Stack
-  direction="row"
-  justifyContent="space-between"
-  alignItems="center"
-  spacing={1}
-  sx={{ mb: 1 }}
->
-  <Typography fontWeight={600}>
-    {item.titulo}
-  </Typography>
+                              direction="row"
+                              justifyContent="space-between"
+                              alignItems="center"
+                              spacing={1}
+                              sx={{ mb: 1 }}
+                            >
+                              <Typography fontWeight={600}>
+                                {item.titulo}
+                              </Typography>
 
-  <IconButton
-    title="Eliminar video"
-    color="error"
-    onClick={() => eliminarVideoGaleria(item)}
-    disabled={subiendo}
-  >
-    <Icon name="trash-2" />
-  </IconButton>
-</Stack>
+                              <IconButton
+                                title="Eliminar video"
+                                color="error"
+                                onClick={() => eliminarVideoGaleria(item)}
+                                disabled={subiendo}
+                              >
+                                <Icon name="trash-2" />
+                              </IconButton>
+                            </Stack>
 
                             {esSupabase ? (
                               item.url_temporal ? (
@@ -961,7 +1139,7 @@ export default function GaleriasView() {
               </Stack>
             </DialogContent>
 
-            <DialogActions sx={{ p: 3 }}>
+            <DialogActions sx={{ px: 3, py: 2.5, borderTop: '1px solid #E2E5DD' }}>
               <Button
                 onClick={() => setGaleriaSeleccionada(null)}
                 disabled={subiendo}
@@ -990,62 +1168,178 @@ export default function GaleriasView() {
         onClose={cerrarDialogoVideo}
         fullWidth
         maxWidth="sm"
+        PaperProps={{
+          sx: {
+            borderRadius: '20px',
+            bgcolor: '#FFFEFB',
+            border: '1px solid #E3E8DE',
+            boxShadow: '0 20px 60px rgba(35, 52, 40, 0.12)',
+            overflow: 'hidden'
+          }
+        }}
       >
-        <DialogTitle sx={{ color: '#343B32', fontFamily: 'Georgia, serif' }}>
-          Agregar video a la galería
+        {/* ENCABEZADO */}
+        <DialogTitle
+          sx={{
+            px: 3.5,
+            pt: 3,
+            pb: 2
+          }}
+        >
+          <Typography
+            sx={{
+              color: '#68745B',
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: 2,
+              mb: 0.8
+            }}
+          >
+            LUZ & MEMORIA
+          </Typography>
+
+          <Typography
+            sx={{
+              fontFamily: 'Georgia, serif',
+              fontSize: { xs: 25, sm: 29 },
+              fontWeight: 600,
+              color: '#343B32'
+            }}
+          >
+            Agregar video a la galería
+          </Typography>
+
+          <Typography
+            sx={{
+              color: '#788174',
+              fontSize: 13,
+              mt: 0.7
+            }}
+          >
+            Selecciona un archivo MP4 o agrega un enlace de YouTube.
+          </Typography>
         </DialogTitle>
 
-        <DialogContent>
+        {/* CONTENIDO */}
+        <DialogContent sx={{ px: 3.5, pb: 3 }}>
           <Stack spacing={2.5} sx={{ pt: 1 }}>
-            {error && <Alert severity="error">{error}</Alert>}
+            {error && (
+              <Alert severity="error" sx={{ borderRadius: 2 }}>
+                {error}
+              </Alert>
+            )}
 
+            {/* TÍTULO */}
             <TextField
+              fullWidth
+              size="small"
               label="Título del video"
               value={video.titulo}
-              onChange={(e) => setVideo({ ...video, titulo: e.target.value })}
+              onChange={(e) =>
+                setVideo({ ...video, titulo: e.target.value })
+              }
               inputProps={{ maxLength: 150 }}
               required
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '10px',
+                  bgcolor: '#FFFFFF'
+                }
+              }}
             />
 
-            <Box sx={{ p: 2, border: '1px solid #EAE8E0', borderRadius: 2 }}>
-              <Typography fontWeight={600} sx={{ mb: 1, color: '#343B32' }}>
-                Subir un video MP4 desde mi dispositivo
+            {/* OPCIÓN 1: ARCHIVO MP4 */}
+            <Box
+              sx={{
+                p: 2.5,
+                border: '1px solid #E3E8DE',
+                borderRadius: '14px',
+                bgcolor: '#FAFAF7'
+              }}
+            >
+              <Typography
+                sx={{
+                  fontWeight: 700,
+                  color: '#343B32',
+                  fontSize: 14,
+                  mb: 0.5
+                }}
+              >
+                Subir video desde mi dispositivo
+              </Typography>
+
+              <Typography
+                sx={{
+                  color: '#788174',
+                  fontSize: 12,
+                  mb: 2
+                }}
+              >
+                Selecciona un archivo MP4 de hasta 50 MB.
               </Typography>
 
               <Button
                 component="label"
                 variant="outlined"
-                startIcon={<Icon name="upload" />}
                 disabled={subiendo || guardando}
+                sx={{
+                  color: '#254C40',
+                  borderColor: '#A9BCA8',
+                  borderRadius: '10px',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  px: 2.5,
+                  py: 1,
+                  '&:hover': {
+                    bgcolor: '#F2F6F1',
+                    borderColor: '#254C40'
+                  }
+                }}
               >
-                Seleccionar video MP4
+                Seleccionar archivo MP4
+
                 <input
                   hidden
                   type="file"
                   accept="video/mp4,.mp4"
-                  onChange={(e) => setArchivoVideo(e.target.files?.[0] || null)}
+                  onChange={(e) =>
+                    setArchivoVideo(e.target.files?.[0] || null)
+                  }
                 />
               </Button>
 
               {archivoVideo && (
-                <Box sx={{ mt: 1 }}>
-                  <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>
+                <Box
+                  sx={{
+                    mt: 2,
+                    p: 1.5,
+                    bgcolor: '#FFFFFF',
+                    border: '1px solid #E3E8DE',
+                    borderRadius: '10px'
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      color: '#343B32',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      overflowWrap: 'anywhere'
+                    }}
+                  >
                     {archivoVideo.name}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
+
+                  <Typography
+                    sx={{
+                      color: '#788174',
+                      fontSize: 12,
+                      mt: 0.3
+                    }}
+                  >
                     {(archivoVideo.size / (1024 * 1024)).toFixed(2)} MB
                   </Typography>
                 </Box>
               )}
-
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                display="block"
-                sx={{ mt: 1 }}
-              >
-                Formato permitido: MP4. Tamaño máximo: 50 MB.
-              </Typography>
 
               <Button
                 fullWidth
@@ -1059,45 +1353,146 @@ export default function GaleriasView() {
                 }
                 sx={{
                   mt: 2,
-                  bgcolor: '#68745B',
-                  '&:hover': { bgcolor: '#59634B' }
+                  bgcolor: '#254C40',
+                  color: '#FFFFFF',
+                  borderRadius: '10px',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  py: 1.1,
+                  boxShadow: 'none',
+                  '&:hover': {
+                    bgcolor: '#1D3D33',
+                    boxShadow: 'none'
+                  }
                 }}
               >
                 {subiendo ? 'Subiendo video...' : 'Subir video MP4'}
               </Button>
             </Box>
 
-            <Box sx={{ textAlign: 'center' }}>
-              <Typography variant="caption" color="text.secondary">
-                O bien, agrega un enlace de YouTube
-              </Typography>
-            </Box>
-
-            <TextField
-              label="URL de YouTube"
-              placeholder="https://www.youtube.com/watch?v=..."
-              value={video.url_externa}
-              onChange={(e) => setVideo({ ...video, url_externa: e.target.value })}
-              helperText="Pega el enlace del video de YouTube."
-            />
-
-            <Button
-              variant="outlined"
-              onClick={guardarVideoYoutube}
-              disabled={
-                subiendo ||
-                guardando ||
-                video.titulo.trim().length < 3 ||
-                !video.url_externa.trim()
-              }
+            {/* SEPARADOR */}
+            <Stack
+              direction="row"
+              spacing={2}
+              alignItems="center"
             >
-              {guardando ? 'Guardando...' : 'Agregar enlace de YouTube'}
-            </Button>
+              <Box
+                sx={{
+                  flex: 1,
+                  height: '1px',
+                  bgcolor: '#E3E8DE'
+                }}
+              />
+
+              <Typography
+                sx={{
+                  fontSize: 12,
+                  color: '#788174',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                O agregar desde YouTube
+              </Typography>
+
+              <Box
+                sx={{
+                  flex: 1,
+                  height: '1px',
+                  bgcolor: '#E3E8DE'
+                }}
+              />
+            </Stack>
+
+            {/* OPCIÓN 2: YOUTUBE */}
+            <Box
+              sx={{
+                p: 2.5,
+                border: '1px solid #E3E8DE',
+                borderRadius: '14px',
+                bgcolor: '#FAFAF7'
+              }}
+            >
+              <Typography
+                sx={{
+                  fontWeight: 700,
+                  color: '#343B32',
+                  fontSize: 14,
+                  mb: 1.5
+                }}
+              >
+                Agregar video de YouTube
+              </Typography>
+
+              <TextField
+                fullWidth
+                size="small"
+                label="URL de YouTube"
+                placeholder="https://www.youtube.com/watch?v=..."
+                value={video.url_externa}
+                onChange={(e) =>
+                  setVideo({ ...video, url_externa: e.target.value })
+                }
+                helperText="Pega el enlace del video de YouTube."
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '10px',
+                    bgcolor: '#FFFFFF'
+                  }
+                }}
+              />
+
+              <Button
+                fullWidth
+                variant="outlined"
+                onClick={guardarVideoYoutube}
+                disabled={
+                  subiendo ||
+                  guardando ||
+                  video.titulo.trim().length < 3 ||
+                  !video.url_externa.trim()
+                }
+                sx={{
+                  mt: 2,
+                  color: '#254C40',
+                  borderColor: '#A9BCA8',
+                  borderRadius: '10px',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  py: 1.1,
+                  '&:hover': {
+                    bgcolor: '#F2F6F1',
+                    borderColor: '#254C40'
+                  }
+                }}
+              >
+                {guardando
+                  ? 'Guardando...'
+                  : 'Agregar enlace de YouTube'}
+              </Button>
+            </Box>
           </Stack>
         </DialogContent>
 
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={cerrarDialogoVideo} disabled={subiendo || guardando}>
+        {/* PIE DE VENTANA */}
+        <DialogActions
+          sx={{
+            px: 3.5,
+            py: 2,
+            borderTop: '1px solid #E3E8DE',
+            bgcolor: '#FFFEFB'
+          }}
+        >
+          <Button
+            onClick={cerrarDialogoVideo}
+            disabled={subiendo || guardando}
+            sx={{
+              color: '#254C40',
+              textTransform: 'none',
+              fontWeight: 600,
+              borderRadius: '10px',
+              px: 3
+            }}
+          >
             Cerrar
           </Button>
         </DialogActions>

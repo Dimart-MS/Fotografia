@@ -336,17 +336,24 @@ export default function BookingsTable({
             </MenuItem>
           )}
 
-        {/* CANCELACIÓN: CONSERVAR LA REGLA ORIGINAL */}
 
-        {menuBooking?.status === 'Pendiente de anticipo' && (
-          <MenuItem
-            onClick={handleCancel}
-            disabled={!onOpenCancelBooking}
-            sx={{ color: '#A34D4D', fontSize: 13, py: 1.3 }}
-          >
-            Cancelar solicitud
-          </MenuItem>
-        )}
+        {/* CANCELACIÓN: SOLO CUANDO EXISTE UNA DECISIÓN PENDIENTE */}
+
+        {menuBooking?.status === 'Pendiente de anticipo' &&
+          menuBooking.decision_anticipo_pendiente && (
+            <MenuItem
+              onClick={handleCancel}
+              disabled={!onOpenCancelBooking}
+              sx={{
+                color: '#A34D4D',
+                fontSize: 13,
+                py: 1.3
+              }}
+            >
+              Cancelar solicitud
+            </MenuItem>
+          )}
+
       </Menu>
     </>
   );

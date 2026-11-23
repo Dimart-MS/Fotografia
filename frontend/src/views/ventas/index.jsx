@@ -15,7 +15,13 @@ import {
     Paper,
     Stack,
     TextField,
-    Typography
+    Typography,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow
 } from '@mui/material';
 import {
     Search as SearchIcon,
@@ -105,31 +111,35 @@ function ResumenCard({ titulo, valor, icono }) {
                 p: 3,
                 bgcolor: '#FFFFFF',
                 border: `1px solid ${COLORS.border}`,
-                borderRadius: 3
+                borderRadius: '26px'
             }}
         >
             <Stack
                 direction="row"
-                alignItems="flex-start"
                 justifyContent="space-between"
+                alignItems="flex-start"
                 spacing={2}
             >
                 <Box sx={{ minWidth: 0 }}>
                     <Typography
                         variant="body2"
-                        sx={{ color: COLORS.muted }}
+                        sx={{
+                            color: COLORS.muted,
+                            fontSize: 13
+                        }}
                     >
                         {titulo}
                     </Typography>
 
                     <Typography
-                        variant="h4"
                         sx={{
-                            mt: 1,
-                            color: COLORS.primary,
                             fontFamily: 'Georgia, serif',
+                            fontSize: { xs: '2rem', md: '2.25rem' },
                             fontWeight: 600,
-                            overflowWrap: 'anywhere'
+                            color: '#254C41',
+                            lineHeight: 1.2,
+                            letterSpacing: '-0.5px',
+                            fontVariantNumeric: 'tabular-nums'
                         }}
                     >
                         {valor}
@@ -138,11 +148,11 @@ function ResumenCard({ titulo, valor, icono }) {
 
                 <Box
                     sx={{
-                        bgcolor: COLORS.soft,
-                        color: COLORS.primary,
-                        width: 44,
-                        height: 44,
-                        borderRadius: 2,
+                        width: 52,
+                        height: 52,
+                        borderRadius: '17px',
+                        bgcolor: '#E9EDE4',
+                        color: '#68745B',
                         display: 'grid',
                         placeItems: 'center',
                         flexShrink: 0
@@ -231,66 +241,6 @@ export default function VentasView() {
     return (
         <Box sx={{ py: 1 }}>
             <Stack
-                direction={{ xs: 'column', sm: 'row' }}
-                justifyContent="space-between"
-                alignItems={{ xs: 'stretch', sm: 'center' }}
-                spacing={2}
-                sx={{ mb: 3 }}
-            >
-                <Box>
-                    <Typography
-                        variant="h5"
-                        sx={{
-                            fontFamily: 'Georgia, serif',
-                            color: COLORS.primary,
-                            fontWeight: 600
-                        }}
-                    >
-                        Historial de ventas
-                    </Typography>
-
-                    <Typography
-                        variant="body2"
-                        sx={{ color: COLORS.muted, mt: 0.5 }}
-                    >
-                        Operaciones generadas automáticamente desde las reservaciones.
-                    </Typography>
-                </Box>
-
-                <Button
-                    variant="outlined"
-                    startIcon={
-                        cargando
-                            ? <CircularProgress size={16} color="inherit" />
-                            : <RefreshIcon />
-                    }
-                    onClick={cargar}
-                    disabled={cargando}
-                    sx={{
-                        borderColor: '#AAB8A1',
-                        color: COLORS.primary,
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        fontWeight: 600,
-                        '&:hover': {
-                            borderColor: COLORS.primary,
-                            bgcolor: COLORS.soft
-                        }
-                    }}
-                >
-                    Actualizar
-                </Button>
-            </Stack>
-
-            <Alert
-                severity="info"
-                sx={{ mb: 3, borderRadius: 2 }}
-            >
-                Las ventas representan importes contratados, no pagos recibidos.
-                Los anticipos y saldos se gestionarán desde Pagos.
-            </Alert>
-
-            <Stack
                 direction={{ xs: 'column', md: 'row' }}
                 spacing={2}
                 sx={{ mb: 3 }}
@@ -326,20 +276,89 @@ export default function VentasView() {
             >
                 <Stack
                     direction={{ xs: 'column', md: 'row' }}
+                    justifyContent="space-between"
+                    alignItems={{ xs: 'stretch', md: 'center' }}
+                    spacing={2}
+                    sx={{ mb: 3 }}
+                >
+                    <Box>
+                        <Typography
+                            variant="h5"
+                            sx={{ fontFamily: 'Georgia, serif', color: COLORS.text }}
+                        >
+                            Ventas registradas
+                        </Typography>
+                        <Typography
+                            variant="body2"
+                            sx={{ color: COLORS.muted, mt: 0.5 }}
+                        >
+                            {filtradas.length} de {ventas.length} ventas
+                        </Typography>
+                    </Box>
+                    <Button
+                        variant="outlined"
+                        startIcon={cargando ? <CircularProgress size={16} color="inherit" /> : <RefreshIcon />}
+                        onClick={cargar}
+                        disabled={cargando}
+                        sx={{
+                            borderColor: '#AAB8A1',
+                            color: COLORS.primary,
+                            borderRadius: 2,
+                            textTransform: 'none',
+                            fontWeight: 600,
+                            '&:hover': { borderColor: COLORS.primary, bgcolor: COLORS.soft }
+                        }}
+                    >
+                        Actualizar
+                    </Button>
+                </Stack>
+                <Stack
+                    direction={{ xs: 'column', md: 'row' }}
                     spacing={2}
                 >
                     <TextField
-                        label="Buscar venta"
-                        placeholder="Folio, cliente o reservación"
+                        placeholder="Buscar por folio, cliente o reservación..."
                         value={busqueda}
                         onChange={(event) => setBusqueda(event.target.value)}
                         size="small"
                         fullWidth
+                        sx={{
+                            '& .MuiOutlinedInput-root': {
+                                height: 46,
+                                borderRadius: '12px',
+                                bgcolor: '#FFFFFF',
+
+                                '& fieldset': {
+                                    borderColor: '#DCE2D8'
+                                },
+
+                                '&:hover fieldset': {
+                                    borderColor: '#AAB8A1'
+                                },
+
+                                '&.Mui-focused fieldset': {
+                                    borderColor: '#254C41',
+                                    borderWidth: '1px'
+                                },
+
+                                '& input': {
+                                    outline: 'none !important',
+                                    boxShadow: 'none !important',
+                                    border: 'none !important',
+                                    background: 'transparent !important'
+                                }
+                            }
+                        }}
                         slotProps={{
                             input: {
                                 startAdornment: (
                                     <InputAdornment position="start">
-                                        <SearchIcon fontSize="small" />
+                                        <SearchIcon
+                                            sx={{
+                                                fontSize: 20,
+                                                color: '#72796D'
+                                            }}
+                                        />
                                     </InputAdornment>
                                 )
                             }
@@ -348,178 +367,223 @@ export default function VentasView() {
 
                     <TextField
                         select
-                        label="Estado"
                         value={estado}
                         onChange={(event) => setEstado(event.target.value)}
                         size="small"
-                        sx={{ minWidth: { md: 200 } }}
+                        sx={{
+                            width: { xs: '100%', md: 230 },
+                            flexShrink: 0,
+                            '& .MuiOutlinedInput-root': {
+                                height: 46,
+                                borderRadius: '12px',
+                                bgcolor: '#FFFFFF',
+                                '& fieldset': {
+                                    borderColor: '#DCE2D8'
+                                },
+                                '&:hover fieldset': {
+                                    borderColor: '#AAB8A1'
+                                },
+                                '&.Mui-focused fieldset': {
+                                    borderColor: '#254C41',
+                                    borderWidth: '1px'
+                                }
+                            }
+                        }}
                     >
                         {['Todas', 'Pendiente', 'Confirmada', 'Cancelada'].map(
                             (opcion) => (
                                 <MenuItem key={opcion} value={opcion}>
-                                    {opcion}
+                                    {opcion === 'Todas' ? 'Todos los estados' : opcion}
                                 </MenuItem>
                             )
                         )}
                     </TextField>
+
                 </Stack>
-            </Paper>
-
-            {error && (
-                <Alert severity="error" sx={{ mb: 3 }}>
-                    {error}
+                <Alert severity="info" sx={{ mt: 2.5, mb: 3, borderRadius: 2 }}>
+                    Las ventas representan importes contratados, no pagos recibidos.
+                    Los anticipos y saldos se gestionarán desde Pagos.
                 </Alert>
-            )}
+                {error && (
+                    <Alert severity="error" sx={{ mb: 3 }}>
+                        {error}
+                    </Alert>
+                )}
 
-            {cargando ? (
-                <Box sx={{ py: 6, textAlign: 'center' }}>
-                    <CircularProgress sx={{ color: COLORS.primary }} />
-                    <Typography sx={{ mt: 2, color: COLORS.muted }}>
-                        Cargando ventas...
-                    </Typography>
-                </Box>
-            ) : filtradas.length === 0 ? (
-                <Paper
-                    elevation={0}
-                    sx={{
-                        py: 6,
-                        px: 3,
-                        textAlign: 'center',
-                        border: `1px solid ${COLORS.border}`,
-                        borderRadius: 3
-                    }}
-                >
-                    <ReceiptIcon
-                        sx={{ fontSize: 42, color: '#879174', mb: 1 }}
-                    />
-
-                    <Typography
-                        variant="h6"
+                {cargando ? (
+                    <Box sx={{ py: 6, textAlign: 'center' }}>
+                        <CircularProgress sx={{ color: COLORS.primary }} />
+                        <Typography sx={{ mt: 2, color: COLORS.muted }}>
+                            Cargando ventas...
+                        </Typography>
+                    </Box>
+                ) : filtradas.length === 0 ? (
+                    <Paper
+                        elevation={0}
                         sx={{
-                            fontFamily: 'Georgia, serif',
-                            color: COLORS.text
+                            py: 6,
+                            px: 3,
+                            textAlign: 'center',
+                            border: `1px solid ${COLORS.border}`,
+                            borderRadius: 3
                         }}
                     >
-                        No hay ventas para mostrar
-                    </Typography>
+                        <ReceiptIcon
+                            sx={{ fontSize: 42, color: '#879174', mb: 1 }}
+                        />
 
-                    <Typography
-                        variant="body2"
-                        sx={{ color: COLORS.muted, mt: 1 }}
-                    >
-                        Las ventas aparecerán al registrar reservaciones.
-                        También puedes modificar los filtros.
-                    </Typography>
-                </Paper>
-            ) : (
-                <Stack spacing={2}>
-                    {filtradas.map((venta) => (
-                        <Paper
-                            key={venta.id_venta}
-                            elevation={0}
+                        <Typography
+                            variant="h6"
                             sx={{
-                                p: { xs: 2, md: 3 },
-                                bgcolor: '#FFFFFF',
-                                border: `1px solid ${COLORS.border}`,
-                                borderRadius: 3,
-                                '&:hover': {
-                                    borderColor: '#B9C7B6'
-                                }
+                                fontFamily: 'Georgia, serif',
+                                color: COLORS.text
                             }}
                         >
-                            <Stack
-                                direction={{ xs: 'column', sm: 'row' }}
-                                justifyContent="space-between"
-                                alignItems={{ xs: 'flex-start', sm: 'center' }}
-                                spacing={2}
-                            >
-                                <Box sx={{ minWidth: 0 }}>
-                                    <Typography
-                                        variant="h6"
-                                        sx={{
-                                            fontFamily: 'Georgia, serif',
-                                            color: COLORS.primary,
-                                            fontWeight: 600
-                                        }}
-                                    >
-                                        Venta #{venta.id_venta}
-                                    </Typography>
+                            No hay ventas para mostrar
+                        </Typography>
 
-                                    <Typography
-                                        fontWeight={600}
-                                        sx={{ mt: 0.5, color: COLORS.text }}
-                                    >
-                                        {venta.nombre_cliente || 'Cliente no disponible'}
-                                    </Typography>
+                        <Typography
+                            variant="body2"
+                            sx={{ color: COLORS.muted, mt: 1 }}
+                        >
+                            Las ventas aparecerán al registrar reservaciones.
+                            También puedes modificar los filtros.
+                        </Typography>
+                    </Paper>
+                ) : (
+                    <Box>
+                        <TableContainer
+                            sx={{
+                                border: `1px solid ${COLORS.border}`,
+                                borderRadius: 2
+                            }}
+                        >
+                            <Table sx={{ minWidth: 850 }}>
+                                <TableHead>
+                                    <TableRow sx={{ bgcolor: '#F5F6F2' }}>
+                                        {[
+                                            'VENTA',
+                                            'CLIENTE Y RESERVACIÓN',
+                                            'FECHA',
+                                            'IMPORTE',
+                                            'ESTADO',
+                                            'ACCIONES'
+                                        ].map((titulo) => (
+                                            <TableCell
+                                                key={titulo}
+                                                sx={{
+                                                    color: COLORS.primary,
+                                                    fontSize: 12,
+                                                    fontWeight: 700,
+                                                    py: 2,
+                                                    borderBottom: `1px solid ${COLORS.border}`
+                                                }}
+                                            >
+                                                {titulo}
+                                            </TableCell>
+                                        ))}
+                                    </TableRow>
+                                </TableHead>
 
-                                    <Typography
-                                        variant="body2"
-                                        sx={{ color: COLORS.muted, mt: 0.5 }}
-                                    >
-                                        {fecha(venta.creada_en)}
-                                    </Typography>
-
-                                    {venta.id_reservacion != null && (
-                                        <Typography
-                                            variant="body2"
-                                            sx={{ color: COLORS.muted }}
+                                <TableBody>
+                                    {filtradas.map((venta) => (
+                                        <TableRow
+                                            key={venta.id_venta}
+                                            hover
+                                            sx={{
+                                                '&:last-child td': {
+                                                    borderBottom: 0
+                                                }
+                                            }}
                                         >
-                                            Reservación #{venta.id_reservacion}
-                                        </Typography>
-                                    )}
-                                </Box>
+                                            <TableCell>
+                                                <Typography
+                                                    fontWeight={700}
+                                                    sx={{ color: COLORS.text }}
+                                                >
+                                                    #{venta.id_venta}
+                                                </Typography>
 
-                                <Stack
-                                    alignItems={{ xs: 'flex-start', sm: 'flex-end' }}
-                                    spacing={1}
-                                >
-                                    <EstadoChip estado={venta.estado} />
+                                                <Typography
+                                                    variant="caption"
+                                                    sx={{ color: COLORS.muted }}
+                                                >
+                                                    {venta.conceptos?.length || 0} concepto(s)
+                                                </Typography>
+                                            </TableCell>
 
-                                    <Typography
-                                        variant="h5"
-                                        sx={{
-                                            color: COLORS.primary,
-                                            fontWeight: 700
-                                        }}
-                                    >
-                                        {moneda(venta.total_centavos)}
-                                    </Typography>
-                                </Stack>
-                            </Stack>
+                                            <TableCell>
+                                                <Typography
+                                                    variant="body2"
+                                                    fontWeight={600}
+                                                    sx={{ color: COLORS.text }}
+                                                >
+                                                    {venta.nombre_cliente || 'Cliente no disponible'}
+                                                </Typography>
 
-                            <Divider sx={{ my: 2 }} />
+                                                {venta.id_reservacion != null && (
+                                                    <Typography
+                                                        variant="caption"
+                                                        sx={{ color: COLORS.muted }}
+                                                    >
+                                                        Reservación #{venta.id_reservacion}
+                                                    </Typography>
+                                                )}
+                                            </TableCell>
 
-                            <Stack
-                                direction="row"
-                                justifyContent="space-between"
-                                alignItems="center"
-                                spacing={2}
-                            >
-                                <Typography
-                                    variant="caption"
-                                    sx={{ color: COLORS.muted }}
-                                >
-                                    {venta.conceptos?.length || 0} concepto(s)
-                                </Typography>
+                                            <TableCell>
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{ color: COLORS.muted }}
+                                                >
+                                                    {fecha(venta.creada_en)}
+                                                </Typography>
+                                            </TableCell>
 
-                                <Button
-                                    variant="outlined"
-                                    onClick={() => setDetalle(venta)}
-                                    sx={{
-                                        borderColor: '#AAB8A1',
-                                        color: COLORS.primary,
-                                        borderRadius: 2,
-                                        textTransform: 'none',
-                                        fontWeight: 600
-                                    }}
-                                >
-                                    Ver detalle
-                                </Button>
-                            </Stack>
-                        </Paper>
-                    ))}
-                </Stack>
-            )}
+                                            <TableCell>
+                                                <Typography
+                                                    fontWeight={700}
+                                                    sx={{ color: '#254C41' }}
+                                                >
+                                                    {moneda(venta.total_centavos)}
+                                                </Typography>
+                                            </TableCell>
+
+                                            <TableCell>
+                                                <EstadoChip estado={venta.estado} />
+                                            </TableCell>
+
+                                            <TableCell>
+                                                <Button
+                                                    variant="outlined"
+                                                    size="small"
+                                                    onClick={() => setDetalle(venta)}
+                                                    sx={{
+                                                        color: '#254C41',
+                                                        borderColor: '#AAB8A1',
+                                                        borderRadius: 2,
+                                                        textTransform: 'none',
+                                                        fontWeight: 600,
+                                                        whiteSpace: 'nowrap',
+                                                        '&:hover': {
+                                                            borderColor: '#254C41',
+                                                            bgcolor: '#F1F4EE'
+                                                        }
+                                                    }}
+                                                >
+                                                    Ver detalle
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                    </Box>
+                )}
+
+
+            </Paper>
 
             <Dialog
                 open={Boolean(detalle)}

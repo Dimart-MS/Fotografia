@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useState } from 'react';
 
 import {
@@ -12,7 +11,14 @@ import {
   DialogTitle,
   IconButton,
   InputAdornment,
+  Paper,
   Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   TextField,
   Typography
 } from '@mui/material';
@@ -214,217 +220,427 @@ export default function PaquetesView() {
 
   return (
     <>
-      <section className="panel">
-        <Stack
-          direction={{ xs: 'column', md: 'row' }}
-          justifyContent="space-between"
-          alignItems={{ xs: 'stretch', md: 'center' }}
-          spacing={2}
-          sx={{ mb: 3 }}
-        >
-          <Box>
-            <Typography
-              variant="h5"
-              sx={{ color: '#343B32', fontFamily: 'Georgia, serif' }}
-            >
-              Catálogo de paquetes
-            </Typography>
 
-            <Typography variant="body2" color="text.secondary">
-              Administra los servicios y precios del estudio fotográfico.
-            </Typography>
-          </Box>
-
-          <Button
-            variant="contained"
-            startIcon={<Icon name="plus" />}
-            onClick={abrirNuevo}
-            sx={{
-              bgcolor: '#68745B',
-              '&:hover': { bgcolor: '#59634B' }
-            }}
-          >
-            Nuevo paquete
-          </Button>
-        </Stack>
-
-        <Stack
-          direction={{ xs: 'column', sm: 'row' }}
-          spacing={2}
-          sx={{ mb: 3 }}
-        >
-          <Box
-            sx={{
-              flex: 1,
-              p: 2,
-              borderRadius: 2,
-              bgcolor: '#F8F6F0'
-            }}
-          >
-            <Typography variant="caption" color="text.secondary">
-              Total de paquetes
-            </Typography>
-            <Typography variant="h5" sx={{ color: '#343B32' }}>
-              {paquetes.length}
-            </Typography>
-          </Box>
-
-          <Box
-            sx={{
-              flex: 1,
-              p: 2,
-              borderRadius: 2,
-              bgcolor: '#EEF0E9'
-            }}
-          >
-            <Typography variant="caption" color="text.secondary">
-              Paquetes activos
-            </Typography>
-            <Typography variant="h5" sx={{ color: '#68745B' }}>
-              {activos}
-            </Typography>
-          </Box>
-        </Stack>
-
-        <TextField
-          fullWidth
-          size="small"
-          placeholder="Buscar por clave, nombre o descripción..."
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-          sx={{ mb: 3 }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <Icon name="search" />
-              </InputAdornment>
-            )
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        {/* ESTADÍSTICAS */}
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: {
+              xs: '1fr',
+              sm: 'repeat(2, minmax(0, 1fr))'
+            },
+            gap: 2
           }}
-        />
-
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-
-        {cargando ? (
-          <Typography color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
-            Cargando paquetes...
-          </Typography>
-        ) : paquetesFiltrados.length === 0 ? (
-          <EmptyState
-            icon="package"
-            title="No hay paquetes para mostrar"
-            description={
-              busqueda
-                ? 'Prueba con otro término de búsqueda.'
-                : 'Registra el primer paquete del estudio.'
+        >
+          {[
+            {
+              label: 'Total de paquetes',
+              value: paquetes.length,
+              icon: 'package'
+            },
+            {
+              label: 'Paquetes activos',
+              value: activos,
+              icon: 'check-circle'
             }
-            actionLabel={!busqueda ? 'Crear paquete' : undefined}
-            onAction={!busqueda ? abrirNuevo : undefined}
-          />
-        ) : (
-          <Box sx={{ overflowX: 'auto' }}>
-            <Box sx={{ minWidth: 700 }}>
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 2fr 1.2fr 1fr 1.3fr',
-                  gap: 2,
-                  p: 1.5,
-                  bgcolor: '#F8F6F0',
-                  borderRadius: 2,
-                  mb: 1
-                }}
+          ].map((stat) => (
+            <Paper
+              key={stat.label}
+              elevation={0}
+              sx={{
+                p: 3,
+                borderRadius: 3,
+                border: '1px solid #E2E5DD',
+                bgcolor: '#FFFFFF'
+              }}
+            >
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="flex-start"
               >
-                {['Clave', 'Paquete', 'Precio', 'Estado', 'Acciones'].map((t) => (
-                  <Typography
-                    key={t}
-                    variant="caption"
-                    fontWeight={700}
-                    color="#68745B"
-                  >
-                    {t}
+                <Box>
+                  <Typography variant="body2" color="text.secondary">
+                    {stat.label}
                   </Typography>
-                ))}
-              </Box>
-
-              {paquetesFiltrados.map((paquete) => (
+                  <Typography
+                    sx={{
+                      mt: 1,
+                      fontFamily: 'Georgia, serif',
+                      fontSize: 38,
+                      fontWeight: 700,
+                      color: '#343B32'
+                    }}
+                  >
+                    {stat.value}
+                  </Typography>
+                </Box>
                 <Box
-                  key={paquete.clave}
                   sx={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 2,
+                    bgcolor: '#E9EDE4',
+                    color: '#68745B',
                     display: 'grid',
-                    gridTemplateColumns: '1fr 2fr 1.2fr 1fr 1.3fr',
-                    gap: 2,
-                    alignItems: 'center',
-                    p: 1.5,
-                    borderBottom: '1px solid #EAE8E0',
-                    opacity: paquete.activo ? 1 : 0.65
+                    placeItems: 'center'
                   }}
                 >
-                  <Typography variant="body2">
-                    {paquete.clave}
-                  </Typography>
-
-                  <Box>
-                    <Typography fontWeight={600} color="#343B32">
-                      {paquete.nombre}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {paquete.descripcion || 'Sin descripción'}
-                    </Typography>
-                  </Box>
-
-                  <Typography fontWeight={600}>
-                    {formatoMoneda(paquete.precioCentavos)}
-                  </Typography>
-
-                  <Chip
-                    size="small"
-                    label={paquete.activo ? 'Activo' : 'Inactivo'}
-                    color={paquete.activo ? 'success' : 'default'}
-                    variant="outlined"
-                  />
-
-                  <Stack direction="row" spacing={0.5}>
-                    <IconButton
-                      size="small"
-                      title="Editar paquete"
-                      onClick={() => abrirEdicion(paquete)}
-                      disabled={!paquete.activo}
-                    >
-                      <Icon name="edit" />
-                    </IconButton>
-
-                    <IconButton
-                      size="small"
-                      title={paquete.activo ? 'Desactivar' : 'Reactivar'}
-                      onClick={() => cambiarEstado(paquete)}
-                      color={paquete.activo ? 'error' : 'success'}
-                    >
-                      <Icon name={paquete.activo ? 'power' : 'refresh-cw'} />
-                    </IconButton>
-                  </Stack>
+                  <Icon name={stat.icon} size={22} />
                 </Box>
-              ))}
+              </Stack>
+            </Paper>
+          ))}
+        </Box>
+
+        {/* LISTADO DE PAQUETES */}
+        <Paper
+          elevation={0}
+          sx={{
+            p: { xs: 2, md: 3 },
+            borderRadius: 3,
+            border: '1px solid #E2E5DD',
+            bgcolor: '#FFFFFF'
+          }}
+        >
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            justifyContent="space-between"
+            alignItems={{ xs: 'stretch', md: 'center' }}
+            spacing={2}
+            sx={{ mb: 3 }}
+          >
+            <Box>
+              <Typography
+                variant="h5"
+                sx={{
+                  fontFamily: 'Georgia, serif',
+                  color: '#343B32'
+                }}
+              >
+                Paquetes registrados
+              </Typography>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mt: 0.5 }}
+              >
+                {paquetesFiltrados.length} de {paquetes.length} paquetes
+              </Typography>
             </Box>
-          </Box>
-        )}
-      </section>
+
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              alignItems={{ xs: 'stretch', sm: 'center' }}
+              spacing={1.5}
+            >
+
+              <TextField
+                size="small"
+                placeholder="Buscar paquete..."
+                value={busqueda}
+                onChange={(event) => setBusqueda(event.target.value)}
+                sx={{
+                  width: { xs: '100%', sm: 300 },
+
+                  '& .MuiOutlinedInput-root': {
+                    height: 44,
+                    borderRadius: '12px',
+                    bgcolor: '#FFFFFF',
+
+                    '& fieldset': {
+                      borderColor: '#DDE5D7'
+                    },
+
+                    '&:hover fieldset': {
+                      borderColor: '#AAB8A1'
+                    },
+
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#68745B',
+                      borderWidth: '1px'
+                    }
+                  },
+
+                  '& .MuiOutlinedInput-input': {
+                    border: 'none !important',
+                    outline: 'none !important',
+                    boxShadow: 'none !important',
+
+                    '&:focus, &:focus-visible': {
+                      border: 'none !important',
+                      outline: 'none !important',
+                      boxShadow: 'none !important'
+                    }
+                  }
+                }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Icon name="search" size={18} />
+                    </InputAdornment>
+                  )
+                }}
+              />
+
+              <Button
+                variant="contained"
+                startIcon={<Icon name="plus" />}
+                onClick={abrirNuevo}
+                sx={{
+                  minHeight: 44,
+                  bgcolor: '#254C41',
+                  whiteSpace: 'nowrap',
+                  '&:hover': {
+                    bgcolor: '#1D3D34'
+                  }
+                }}
+              >
+                Nuevo paquete
+              </Button>
+            </Stack>
+          </Stack>
+
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
+
+          {cargando ? (
+            <Typography
+              color="text.secondary"
+              sx={{ py: 4, textAlign: 'center' }}
+            >
+              Cargando paquetes...
+            </Typography>
+          ) : paquetesFiltrados.length === 0 ? (
+            <EmptyState
+              icon="package"
+              title="No hay paquetes para mostrar"
+              description={
+                busqueda
+                  ? 'Prueba con otro término de búsqueda.'
+                  : 'Registra el primer paquete del estudio.'
+              }
+              actionLabel={!busqueda ? 'Crear paquete' : undefined}
+              onAction={!busqueda ? abrirNuevo : undefined}
+            />
+          ) : (
+            <TableContainer
+              sx={{
+                border: '1px solid #E2E5DD',
+                borderRadius: 2
+              }}
+            >
+              <Table sx={{ minWidth: 750 }}>
+                <TableHead>
+                  <TableRow sx={{ bgcolor: '#F1F4EE' }}>
+                    <TableCell>Paquete</TableCell>
+                    <TableCell>Clave</TableCell>
+                    <TableCell>Precio</TableCell>
+                    <TableCell>Estado</TableCell>
+                    <TableCell align="right">Acciones</TableCell>
+                  </TableRow>
+                </TableHead>
+
+                <TableBody>
+                  {paquetesFiltrados.map((paquete) => (
+                    <TableRow
+                      key={paquete.clave}
+                      hover
+                      sx={{
+                        opacity: paquete.activo ? 1 : 0.65,
+                        '&:last-child td': {
+                          borderBottom: 0
+                        }
+                      }}
+                    >
+                      <TableCell>
+                        <Stack
+                          direction="row"
+                          alignItems="center"
+                          spacing={1.5}
+                        >
+                          <Box
+                            sx={{
+                              width: 36,
+                              height: 36,
+                              borderRadius: '50%',
+                              bgcolor: '#E9EDE4',
+                              color: '#526047',
+                              display: 'grid',
+                              placeItems: 'center',
+                              flexShrink: 0
+                            }}
+                          >
+                            <Icon name="camera" size={18} />
+                          </Box>
+
+                          <Box sx={{ minWidth: 0 }}>
+                            <Typography
+                              variant="body2"
+                              fontWeight={600}
+                              sx={{ color: '#343B32' }}
+                            >
+                              {paquete.nombre}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              sx={{ overflowWrap: 'anywhere' }}
+                            >
+                              {paquete.descripcion || 'Sin descripción'}
+                            </Typography>
+                          </Box>
+                        </Stack>
+                      </TableCell>
+
+                      <TableCell>
+                        <Typography variant="body2">
+                          {paquete.clave}
+                        </Typography>
+                      </TableCell>
+
+                      <TableCell>
+                        <Typography
+                          variant="body2"
+                          fontWeight={600}
+                          sx={{ color: '#254C41' }}
+                        >
+                          {formatoMoneda(paquete.precioCentavos)}
+                        </Typography>
+                      </TableCell>
+
+                      <TableCell>
+                        <Chip
+                          size="small"
+                          label={paquete.activo ? 'Activo' : 'Inactivo'}
+                          sx={{
+                            bgcolor: paquete.activo ? '#E9F0E5' : '#F1F1F1',
+                            color: paquete.activo ? '#526B48' : '#747474',
+                            fontWeight: 600
+                          }}
+                        />
+                      </TableCell>
+
+                      <TableCell align="right">
+                        <Stack
+                          direction="row"
+                          spacing={1}
+                          justifyContent="flex-end"
+                        >
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() => abrirEdicion(paquete)}
+                            disabled={!paquete.activo}
+                            sx={{
+                              color: '#526047',
+                              borderColor: '#AAB8A1',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            Editar
+                          </Button>
+
+                          <Button
+                            size="small"
+                            variant="contained"
+                            onClick={() => cambiarEstado(paquete)}
+                            sx={{
+                              bgcolor: '#254C41',
+                              whiteSpace: 'nowrap',
+                              '&:hover': {
+                                bgcolor: '#1D3D34'
+                              }
+                            }}
+                          >
+                            {paquete.activo ? 'Desactivar' : 'Reactivar'}
+                          </Button>
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </Paper>
+      </Box>
+
 
       <Dialog
         open={dialogoAbierto}
         onClose={cerrarDialogo}
         fullWidth
         maxWidth="sm"
+        PaperProps={{
+          sx: {
+            borderRadius: '24px',
+            bgcolor: '#FFFFFF',
+            overflow: 'hidden'
+          }
+        }}
       >
         <Box component="form" onSubmit={guardarPaquete}>
-          <DialogTitle sx={{ color: '#343B32', fontFamily: 'Georgia, serif' }}>
-            {paqueteEditar ? 'Editar paquete' : 'Registrar paquete'}
+
+          <DialogTitle
+            sx={{
+              px: { xs: 3, sm: 4 },
+              pt: 4,
+              pb: 3,
+              borderBottom: '1px solid #E5E8E1'
+            }}
+          >
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 700,
+                letterSpacing: '0.18em',
+                color: '#68745B',
+                mb: 1.5
+              }}
+            >
+              LUZ & MEMORIA
+            </Typography>
+
+            <Typography
+              sx={{
+                fontFamily: 'Georgia, serif',
+                fontSize: { xs: 25, sm: 29 },
+                fontWeight: 600,
+                color: '#343B32',
+                mb: 1
+              }}
+            >
+              {paqueteEditar ? 'Editar paquete' : 'Registrar paquete'}
+            </Typography>
+
+            <Typography
+              variant="body2"
+              sx={{
+                color: '#7B8278',
+                lineHeight: 1.7
+              }}
+            >
+              {paqueteEditar
+                ? 'Actualiza la información y el precio del servicio fotográfico.'
+                : 'Configura un nuevo servicio fotográfico para el catálogo del estudio.'}
+            </Typography>
           </DialogTitle>
 
-          <DialogContent>
+
+          <DialogContent
+            sx={{
+              px: { xs: 3, sm: 4 },
+              py: 3,
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '12px'
+              }
+            }}
+          >
             <Stack spacing={2.5} sx={{ pt: 1 }}>
               {error && <Alert severity="error">{error}</Alert>}
 
@@ -474,8 +690,23 @@ export default function PaquetesView() {
             </Stack>
           </DialogContent>
 
-          <DialogActions sx={{ p: 3 }}>
-            <Button onClick={cerrarDialogo} disabled={guardando}>
+          <DialogActions
+            sx={{
+              px: { xs: 3, sm: 4 },
+              py: 2.5,
+              borderTop: '1px solid #E5E8E1',
+              gap: 2
+            }}
+          >
+            <Button
+              onClick={cerrarDialogo}
+              disabled={guardando}
+              sx={{
+                color: '#68745B',
+                fontWeight: 600,
+                textTransform: 'none'
+              }}
+            >
               Cancelar
             </Button>
 
@@ -485,7 +716,14 @@ export default function PaquetesView() {
               disabled={guardando}
               sx={{
                 bgcolor: '#68745B',
-                '&:hover': { bgcolor: '#59634B' }
+                borderRadius: '12px',
+                minHeight: 44,
+                px: 3,
+                textTransform: 'none',
+                fontWeight: 600,
+                '&:hover': {
+                  bgcolor: '#59634B'
+                }
               }}
             >
               {guardando ? 'Guardando...' : 'Guardar paquete'}

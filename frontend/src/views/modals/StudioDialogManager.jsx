@@ -119,10 +119,33 @@ export default function StudioDialogManager() {
   // ==============================|| ESTILOS COMPARTIDOS ||============================== //
 
   const dialogPaperSx = {
-    borderRadius: 3,
-    maxHeight: 'calc(100dvh - 32px)',
+    borderRadius: '20px',
+    maxHeight: 'min(780px, calc(100dvh - 80px))',
+    margin: '24px',
     display: 'flex',
-    flexDirection: 'column'
+    flexDirection: 'column',
+    bgcolor: '#FFFFFF',
+    border: '1px solid #E2E5DD',
+    boxShadow: '0 20px 60px rgba(31, 48, 39, 0.12)',
+    overflow: 'hidden',
+
+    '& .MuiDialogContent-root': {
+      scrollbarWidth: 'thin',
+      scrollbarColor: '#C8D2C3 transparent',
+
+      '&::-webkit-scrollbar': {
+        width: '6px'
+      },
+
+      '&::-webkit-scrollbar-track': {
+        background: 'transparent'
+      },
+
+      '&::-webkit-scrollbar-thumb': {
+        backgroundColor: '#C8D2C3',
+        borderRadius: '10px'
+      }
+    }
   };
 
   const sectionTitleSx = {
@@ -240,11 +263,15 @@ export default function StudioDialogManager() {
         open={Boolean(modal) && !isDetailsModal && modal !== 'temporaryPassword'}
         onClose={closeModal}
         fullWidth
-        maxWidth="sm"
+        maxWidth="md"
         scroll="paper"
         slotProps={{
           paper: {
-            sx: dialogPaperSx
+            sx: {
+              ...dialogPaperSx,
+              width: '100%',
+              maxWidth: '760px'
+            }
           }
         }}
       >
