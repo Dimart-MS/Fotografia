@@ -11,7 +11,7 @@ const estudioMenu = {
       eyebrow: 'RESUMEN OPERATIVO',
       heading: 'Panel del estudio',
       subtitle: 'Indicadores, actividad y próximos eventos.',
-      icon: 'home',
+      icon: 'layout-dashboard',
       section: 'PRINCIPAL'
     },
     {
@@ -21,7 +21,7 @@ const estudioMenu = {
       eyebrow: 'GESTIÓN DE CLIENTES',
       heading: 'Directorio de clientes',
       subtitle: 'Información de clientes y eventos asociados.',
-      icon: 'people',
+      icon: 'users-round',
       section: 'OPERACIONES',
       showCountBadge: true
     },
@@ -32,7 +32,7 @@ const estudioMenu = {
       eyebrow: 'CONTROL DE FECHAS Y ANTICIPOS',
       heading: 'Agenda y reservas',
       subtitle: 'Disponibilidad mensual, solicitudes pendientes y confirmación de anticipos.',
-      icon: 'calendar',
+      icon: 'calendar-days',
       section: 'OPERACIONES'
     },
     {
@@ -63,7 +63,7 @@ const estudioMenu = {
       eyebrow: 'CONTROL FINANCIERO',
       heading: 'Gestión de ventas',
       subtitle: 'Operaciones comerciales y sus detalles.',
-      icon: 'check',
+      icon: 'shopping-bag',
       section: 'FINANZAS'
     },
     {
@@ -73,7 +73,7 @@ const estudioMenu = {
       eyebrow: 'CONTROL FINANCIERO',
       heading: 'Pagos y comprobantes',
       subtitle: 'Consulta pagos, revisa comprobantes y valida anticipos.',
-      icon: 'check',
+      icon: 'receipt-text',
       section: 'FINANZAS'
     },
     {
@@ -83,9 +83,9 @@ const estudioMenu = {
       eyebrow: 'CONTENIDO FOTOGRÁFICO',
       heading: 'Galerías multimedia',
       subtitle: 'Fotografías y videos asociados a eventos.',
-      icon: 'camera',
+      icon: 'images',
       section: 'CONTENIDO',
-      enabled: false
+      enabled: true
     },
     {
       id: 'entregas',
@@ -94,9 +94,9 @@ const estudioMenu = {
       eyebrow: 'SEGUIMIENTO',
       heading: 'Entregas de eventos',
       subtitle: 'Estado y seguimiento de las entregas.',
-      icon: 'check',
+      icon: 'package-check',
       section: 'CONTENIDO',
-      enabled: false
+      enabled: true
     },
     {
       id: 'notificaciones',

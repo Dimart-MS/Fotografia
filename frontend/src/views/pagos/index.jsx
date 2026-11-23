@@ -156,7 +156,8 @@ function IndicatorCard({ title, value, icon }) {
             elevation={0}
             sx={{
                 p: 3,
-                borderRadius: 3,
+                minHeight: 134,
+                borderRadius: '26px',
                 border: `1px solid ${COLORS.border}`,
                 bgcolor: '#FFFFFF'
             }}
@@ -177,8 +178,12 @@ function IndicatorCard({ title, value, icon }) {
                     <Typography
                         variant="h3"
                         sx={{
-                            fontWeight: 700,
+                            fontFamily: 'Georgia, serif',
+                            fontSize: { xs: '2.15rem', md: '2.5rem' },
+                            fontWeight: 600,
                             color: '#354337',
+                            lineHeight: 1.15,
+                            fontVariantNumeric: 'tabular-nums',
                             mt: 1
                         }}
                     >
@@ -188,9 +193,9 @@ function IndicatorCard({ title, value, icon }) {
 
                 <Box
                     sx={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: 2,
+                        width: 52,
+                        height: 52,
+                        borderRadius: '16px',
                         bgcolor: COLORS.soft,
                         color: COLORS.primary,
                         display: 'grid',
@@ -514,7 +519,8 @@ export default function PagosView() {
                 elevation={0}
                 sx={{
                     p: { xs: 2, md: 3 },
-                    borderRadius: 3,
+                    borderRadius: '26px',
+                    bgcolor: '#FFFFFF',
                     border: `1px solid ${COLORS.border}`,
                     mb: 3
                 }}
@@ -551,8 +557,12 @@ export default function PagosView() {
                         onClick={loadData}
                         disabled={loading || saving}
                         sx={{
-                            color: COLORS.primary,
-                            borderColor: '#AAB8A1'
+                            color: '#254C41',
+                            borderColor: '#AAB8A1',
+                            borderRadius: 2,
+                            textTransform: 'none',
+                            fontWeight: 600,
+                            '&:hover': { borderColor: '#254C41', bgcolor: '#F1F4EE' }
                         }}
                     >
                         Actualizar
@@ -578,7 +588,18 @@ export default function PagosView() {
                     >
                         <Table sx={{ minWidth: 1100 }}>
                             <TableHead>
-                                <TableRow sx={{ bgcolor: COLORS.header }}>
+                                <TableRow sx={{
+                                    bgcolor: '#F5F6F2',
+                                    '& .MuiTableCell-head': {
+                                        color: COLORS.primary,
+                                        fontSize: 12,
+                                        fontWeight: 700,
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.025em',
+                                        py: 2,
+                                        borderBottom: `1px solid ${COLORS.border}`
+                                    }
+                                }}>
                                     <TableCell>Cliente</TableCell>
                                     <TableCell>Reservación</TableCell>
                                     <TableCell>Total de reservación</TableCell>
@@ -632,9 +653,12 @@ export default function PagosView() {
                                                 variant="contained"
                                                 onClick={() => openProof(proof)}
                                                 sx={{
-                                                    bgcolor: COLORS.primary,
+                                                    bgcolor: '#254C41',
+                                                    borderRadius: 2,
+                                                    textTransform: 'none',
+                                                    fontWeight: 600,
                                                     '&:hover': {
-                                                        bgcolor: COLORS.primaryHover
+                                                        bgcolor: '#1C3D34'
                                                     }
                                                 }}
                                             >
@@ -654,7 +678,8 @@ export default function PagosView() {
                 elevation={0}
                 sx={{
                     p: { xs: 2, md: 3 },
-                    borderRadius: 3,
+                    borderRadius: '26px',
+                    bgcolor: '#FFFFFF',
                     border: `1px solid ${COLORS.border}`
                 }}
             >
@@ -688,14 +713,31 @@ export default function PagosView() {
                     <Stack
                         direction={{ xs: 'column', sm: 'row' }}
                         spacing={1.5}
+                        sx={{ width: { xs: '100%', md: 'auto' } }}
                     >
                         <TextField
                             size="small"
-                            label="Buscar pago"
-                            placeholder="Cliente, referencia o reserva"
+                            placeholder="Cliente, referencia o reservación..."
                             value={search}
                             onChange={(event) => setSearch(event.target.value)}
-                            sx={{ minWidth: { sm: 260 } }}
+                            aria-label="Buscar pago"
+                            sx={{
+                                minWidth: { sm: 280 },
+                                '& .MuiOutlinedInput-root': {
+                                    height: 46,
+                                    borderRadius: '12px',
+                                    bgcolor: '#FFFFFF',
+                                    '& fieldset': { borderColor: '#DCE2D8' },
+                                    '&:hover fieldset': { borderColor: '#AAB8A1' },
+                                    '&.Mui-focused fieldset': { borderColor: '#254C41', borderWidth: 1 },
+                                    '& input': {
+                                        outline: 'none !important',
+                                        boxShadow: 'none !important',
+                                        border: 'none !important',
+                                        background: 'transparent !important'
+                                    }
+                                }
+                            }}
                             InputProps={{
                                 startAdornment: (
                                     <InputAdornment position="start">
@@ -708,14 +750,23 @@ export default function PagosView() {
                         <TextField
                             select
                             size="small"
-                            label="Estado"
                             value={statusFilter}
-                            onChange={(event) =>
-                                setStatusFilter(event.target.value)
-                            }
+                            onChange={(event) => setStatusFilter(event.target.value)}
                             SelectProps={{ native: true }}
+                            aria-label="Estado"
+                            sx={{
+                                minWidth: { sm: 145 },
+                                '& .MuiOutlinedInput-root': {
+                                    height: 46,
+                                    borderRadius: '12px',
+                                    bgcolor: '#FFFFFF',
+                                    '& fieldset': { borderColor: '#DCE2D8' },
+                                    '&:hover fieldset': { borderColor: '#AAB8A1' },
+                                    '&.Mui-focused fieldset': { borderColor: '#254C41', borderWidth: 1 }
+                                }
+                            }}
                         >
-                            <option value="Todos">Todos</option>
+                            <option value="Todos">Todos los estados</option>
                             <option value="Pendiente">Pendiente</option>
                             <option value="Aprobado">Aprobado</option>
                             <option value="Rechazado">Rechazado</option>
@@ -742,7 +793,18 @@ export default function PagosView() {
                     >
                         <Table sx={{ minWidth: 850 }}>
                             <TableHead>
-                                <TableRow sx={{ bgcolor: COLORS.header }}>
+                                <TableRow sx={{
+                                    bgcolor: '#F5F6F2',
+                                    '& .MuiTableCell-head': {
+                                        color: COLORS.primary,
+                                        fontSize: 12,
+                                        fontWeight: 700,
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.025em',
+                                        py: 2,
+                                        borderBottom: `1px solid ${COLORS.border}`
+                                    }
+                                }}>
                                     <TableCell>Pago</TableCell>
                                     <TableCell>Cliente</TableCell>
                                     <TableCell>Reservación</TableCell>
@@ -797,7 +859,7 @@ export default function PagosView() {
                 maxWidth="md"
                 PaperProps={{
                     sx: {
-                        borderRadius: 4,
+                        borderRadius: '26px',
                         bgcolor: '#FFFFFF'
                     }
                 }}
@@ -810,7 +872,10 @@ export default function PagosView() {
                                 justifyContent: 'space-between',
                                 alignItems: 'center',
                                 fontFamily: 'Georgia, serif',
-                                color: COLORS.dark
+                                color: COLORS.dark,
+                                px: 3,
+                                py: 2.5,
+                                borderBottom: `1px solid ${COLORS.border}`
                             }}
                         >
                             Revisar comprobante
@@ -834,52 +899,75 @@ export default function PagosView() {
                             </IconButton>
                         </DialogTitle>
 
-                        <DialogContent dividers>
-                            <Stack spacing={2.5}>
+                        <DialogContent sx={{ px: { xs: 2, sm: 3 }, py: 3 }}>
+                            <Stack spacing={2.25}>
                                 {error && (
                                     <Alert severity="error">
                                         {error}
                                     </Alert>
                                 )}
 
-                                <Typography variant="body2">
-                                    <strong>Cliente:</strong>{' '}
-                                    {selectedProof.nombre_cliente}
-                                </Typography>
-
-                                <Typography variant="body2">
-                                    <strong>Reservación:</strong>{' '}
-                                    #{selectedProof.id_reservacion}
-                                </Typography>
-
-                                <Typography variant="body2">
-                                    <strong>Total de reservación:</strong>{' '}
-                                    {getReservationTotal(bookings, selectedProof.id_reservacion)}
-                                </Typography>
-
-                                <Typography variant="body2">
-                                    <strong>Total abonado anteriormente:</strong>{' '}
-                                    {getReservationPaid(bookings, selectedProof.id_reservacion)}
-                                </Typography>
-
-                                <Typography variant="body2">
-                                    <strong>Saldo pendiente:</strong>{' '}
-                                    {getReservationBalance(bookings, selectedProof.id_reservacion)}
-                                </Typography>
+                                <Box
+                                    sx={{
+                                        display: 'grid',
+                                        gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
+                                        gap: 2,
+                                        p: 2.5,
+                                        borderRadius: 3,
+                                        bgcolor: '#F8F9F6',
+                                        border: `1px solid ${COLORS.border}`
+                                    }}
+                                >
+                                    <Box>
+                                        <Typography variant="caption" sx={{ color: COLORS.muted }}>Cliente</Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 600, color: COLORS.dark }}>
+                                            {selectedProof.nombre_cliente}
+                                        </Typography>
+                                    </Box>
+                                    <Box>
+                                        <Typography variant="caption" sx={{ color: COLORS.muted }}>Reservación</Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 600, color: COLORS.dark }}>
+                                            #{selectedProof.id_reservacion}
+                                        </Typography>
+                                    </Box>
+                                    <Box>
+                                        <Typography variant="caption" sx={{ color: COLORS.muted }}>Total de reservación</Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 600, color: COLORS.dark }}>
+                                            {getReservationTotal(bookings, selectedProof.id_reservacion)}
+                                        </Typography>
+                                    </Box>
+                                    <Box>
+                                        <Typography variant="caption" sx={{ color: COLORS.muted }}>Total abonado anteriormente</Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 600, color: COLORS.dark }}>
+                                            {getReservationPaid(bookings, selectedProof.id_reservacion)}
+                                        </Typography>
+                                    </Box>
+                                    <Box>
+                                        <Typography variant="caption" sx={{ color: COLORS.muted }}>Saldo pendiente</Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 700, color: '#254C41' }}>
+                                            {getReservationBalance(bookings, selectedProof.id_reservacion)}
+                                        </Typography>
+                                    </Box>
+                                </Box>
 
                                 <Divider />
 
-                                <Typography variant="body2">
-                                    <strong>Importe de este comprobante:</strong>{' '}
-                                    {selectedProof.monto_centavos != null
-                                        ? formatAmount(selectedProof.monto_centavos)
-                                        : 'Por verificar'}
-                                </Typography>
-
-                                <Typography variant="body2">
-                                    <strong>Método de pago:</strong>{' '}
-                                    {selectedProof.metodo_pago || 'Transferencia'}
-                                </Typography>
+                                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3}>
+                                    <Box sx={{ flex: 1 }}>
+                                        <Typography variant="caption" sx={{ color: COLORS.muted }}>Importe de este comprobante</Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 600, color: COLORS.dark }}>
+                                            {selectedProof.monto_centavos != null
+                                                ? formatAmount(selectedProof.monto_centavos)
+                                                : 'Por verificar'}
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={{ flex: 1 }}>
+                                        <Typography variant="caption" sx={{ color: COLORS.muted }}>Método de pago</Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 600, color: COLORS.dark }}>
+                                            {selectedProof.metodo_pago || 'Transferencia'}
+                                        </Typography>
+                                    </Box>
+                                </Stack>
 
                                 <Divider />
 
@@ -904,7 +992,7 @@ export default function PagosView() {
                                         sx={{
                                             display: 'block',
                                             width: '100%',
-                                            maxHeight: 450,
+                                            maxHeight: 360,
                                             objectFit: 'contain',
                                             borderRadius: 2,
                                             border: `1px solid ${COLORS.border}`
@@ -957,7 +1045,7 @@ export default function PagosView() {
                             </Stack>
                         </DialogContent>
 
-                        <DialogActions sx={{ p: 3 }}>
+                        <DialogActions sx={{ px: 3, py: 2, borderTop: `1px solid ${COLORS.border}`, gap: 1 }}>
                             <Button
                                 onClick={closeProof}
                                 disabled={saving}

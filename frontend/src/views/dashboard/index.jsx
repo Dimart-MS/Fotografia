@@ -128,11 +128,26 @@ export default function DashboardView() {
             </div>
 
             <Button
-              variant="text"
+              variant="outlined"
               onClick={() => navigateToPage('reservas')}
+              sx={{
+                color: '#526047',
+                borderColor: '#B7C4AD',
+                borderRadius: 2.5,
+                minHeight: 42,
+                px: 2.5,
+                fontWeight: 600,
+                textTransform: 'none',
+                whiteSpace: 'nowrap',
+                '&:hover': {
+                  borderColor: '#68745B',
+                  bgcolor: '#F1F4EE'
+                }
+              }}
             >
               Ver agenda completa
             </Button>
+
           </div>
 
           <BookingsTable
