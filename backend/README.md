@@ -1,45 +1,82 @@
-# Luz y Memoria · Sistema de gestión para fotografía
+# Luz & Memoria · Sistema Integral de Gestión para Fotografía
 
-## Tecnologías y requisitos
+Repositorio del proyecto **Luz & Memoria** (Web, Backend FastAPI, Aplicación Android y Suite de Pruebas de Disponibilidad, Funcionalidad y Logs para evaluación de SLA).
 
-| Componente | Tecnologías | Versión para desarrollo |
-|---|---|---|
-| Backend | Python, FastAPI y SQLAlchemy | Python 3.11 mínimo según las dependencias. Probado con 3.13. |
-| Frontend | React 19, Vite 6, Material UI 7.0.2 y Redux Toolkit | Para Windows, Node.js 18.x mínimo según las dependencias de Vite (también admite 20.x y 22 en adelante). Se recomienda la versión probada, Node.js 24.16 con npm. |
-| Base de datos | MySQL 8 y PyMySQL | Probado con MySQL 8.4.3. |
+## Estructura del Proyecto
 
-## Arranque local en Windows
+```text
+Proyecto_2_1_Fotografia/
+├── backend/
+│   ├── app/                                       <-- Código principal del backend FastAPI
+│   ├── documentacion/
+│   │   ├── Guia_Presentacion_Proyecto_3.md        <-- Guía y guion de 15 min para los 3 integrantes
+│   │   └── Proyecto_3_Pruebas_Logs_y_SLA.docx     <-- Reporte físico (Portada + 3 páginas)
+│   ├── pruebas_p3/
+│   │   ├── soporte/                               <-- Módulos internos (conexión, semilla, SQL, reporte)
+│   │   ├── resultados/                            <-- Evidencias JSON y logs JSONL (ignorados en Git)
+│   │   ├── compose.yaml                           <-- Docker PostgreSQL 17.12 aislado (puerto 55432)
+│   │   ├── verificar_paso3.py                     <-- Comando 1 de la guía (Parte 1: Semilla y acceso)
+│   │   ├── ejecutar_pruebas.py                    <-- Comando 2 de la guía (Parte 2: 11 pruebas funcionales)
+│   │   ├── test_funcionales_p3.py                 <-- Casos Pytest de los 7 módulos del sistema
+│   │   ├── monitorear_servicio.py                 <-- Comando 3 de la guía (Parte 3: Caída y recuperación)
+│   │   ├── resumir_resultados.py                  <-- Comando 4 de la guía (Parte 4: Logs JSONL, P95 y SLA)
+│   │   └── README.md
+│   ├── .env.example / .gitignore
+│   ├── README.md
+│   └── requirements.txt
+│
+├── frontend/
+│   ├── public/
+│   ├── src/                                       <-- Aplicación React 19 + Material UI 7 + Redux Toolkit
+│   ├── index.html
+│   ├── package.json
+│   └── vite.config.js
+│
+└── mobil/                                         <-- Aplicación Android (Kotlin / Jetpack Compose)
+```
 
-Con MySQL activo, abre dos terminales en la raíz del proyecto.
+---
 
-**1. Backend** (PowerShell)
+## Ejecución de la Demostración y Pruebas del Proyecto 3
+
+Con **Docker Desktop** abierto, abrir una terminal PowerShell dentro de `backend/`:
 
 ```powershell
 cd backend
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe run_local.py
 ```
 
-`venv` crea el entorno local y `pip install -r requirements.txt` descarga las dependencias del backend en ese entorno. El último comando inicia Clientes (puerto 8011) y Reservas (8012) y muestra la **clave del estudio** que usarás en el panel.
-
-El backend se conecta a MySQL en `127.0.0.1:3306`. Intenta entrar como `root` sin contraseña y, si MySQL rechaza el acceso, solicita usuario y contraseña por consola. La cuenta debe poder crear bases y tablas. Al primer arranque se crean **fotografia_clientes** y **fotografia_reservas**, con cuatro clientes y cuatro reservas de ejemplo en una instalación vacía. Si tu MySQL usa otro puerto, ejecuta, por ejemplo, `$env:MYSQL_PORT = '3307'` en esa terminal antes de iniciar el backend.
-
-**2. Frontend** (segunda terminal)
+### Parte 1 — Verificar contenedor PostgreSQL local y sembrar datos de prueba
+Verifica que el contenedor `fotografia-pruebas-p3-postgres-1` esté activo en `127.0.0.1:55432`, siembra las cuentas de prueba (Administrador, Clientes y Paquetes) y comprueba `/health` y login JWT en el puerto `8010`:
 
 ```powershell
-cd frontend
-npm.cmd ci
-npm.cmd run dev
+docker compose --env-file pruebas_p3/.env -f pruebas_p3/compose.yaml ps
+.\.venv\Scripts\python.exe pruebas_p3/verificar_paso3.py
 ```
 
-`npm.cmd ci` instala las versiones registradas en `package-lock.json`. `npm.cmd run dev` inicia el frontend en **http://127.0.0.1:5175**. Entra con la clave que muestra el backend.
+### Parte 2 — Ejecutar la suite de 11 pruebas funcionales sobre los 7 módulos
+Ejecuta los casos de Acceso/Roles, Clientes, Paquetes, Reservas/Concurrencia, Pagos, Ventas y Galerías/Entregas, mostrando la tabla resumen por columnas en consola:
 
-Para los siguientes arranques basta con tener MySQL activo y repetir el último comando de cada bloque desde su carpeta. Vuelve a instalar dependencias si cambian `requirements.txt` o `package-lock.json`.
+```powershell
+.\.venv\Scripts\python.exe pruebas_p3/ejecutar_pruebas.py
+```
 
-## Historias cubiertas
+### Parte 3 — Monitoreo de disponibilidad (`/health`), caída controlada y recuperación
+Sondea `http://127.0.0.1:8010/health` cada `0.5 s`, detiene únicamente el proceso del backend en `8010` para registrar las sondas fallidas (`ERROR_CONEXION`), lo reinicia y verifica la recuperación con 4 sondas saludables consecutivas:
 
-- **HU06 · Registro y consulta de clientes.** Guarda nombre, teléfono, correo y domicilio, permite consultar el directorio y rechaza correos duplicados.
-- **HU02 · Reservas y anticipos.** Registra solicitudes por cliente, fecha, evento y paquete. Una solicitud pendiente deja disponible la fecha. Un anticipo de entre 50 % y 100 % confirma la reserva y aparta el día. Las solicitudes pendientes se pueden cancelar conservando el historial.
+```powershell
+.\.venv\Scripts\python.exe pruebas_p3/monitorear_servicio.py
+```
 
-**Pruebas.** Desde `backend`, ejecuta `.\.venv\Scripts\python.exe -m pytest tests -q`. Por defecto se usa SQLite temporal. El [reporte de la entrega en MySQL](artifacts/pruebas_mysql.xml) contiene los resultados de los 26 casos.
+### Parte 4 — Medición de latencia HTTP (P95), logs JSONL sanitizados y evaluación de SLA
+Ejecuta 100 peticiones HTTP válidas (80 lecturas y 20 escrituras), genera la bitácora sanitizada `eventos.jsonl` (sin tokens ni contraseñas) y muestra en pantalla los 4 indicadores separados frente al SLA:
+
+```powershell
+.\.venv\Scripts\python.exe pruebas_p3/resumir_resultados.py
+Get-Content pruebas_p3/resultados/paso6_eventos.jsonl -TotalCount 4
+```
+
+---
+
+## Documentación para el Equipo
+* **Guía paso a paso para la exposición:** [documentacion/Guia_Presentacion_Proyecto_3.md](documentacion/Guia_Presentacion_Proyecto_3.md)
+* **Reporte físico en Word:** [documentacion/Proyecto_3_Pruebas_Logs_y_SLA.docx](documentacion/Proyecto_3_Pruebas_Logs_y_SLA.docx)
