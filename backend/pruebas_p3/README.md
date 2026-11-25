@@ -19,6 +19,8 @@ pruebas_p3/
 
 ## Comandos de ejecución (desde `backend/`)
 
+*(En una computadora nueva, solo se requiere tener **Docker Desktop** abierto y haber ejecutado `python -m venv .venv` y `.\.venv\Scripts\python.exe -m pip install -r requirements.txt`. El primer script configura `.env`, inicia el contenedor y crea las 23 tablas automáticamente).*
+
 ```powershell
 # 1. Verificar contenedor y sembrar datos iniciales
 docker compose --env-file pruebas_p3/.env -f pruebas_p3/compose.yaml ps

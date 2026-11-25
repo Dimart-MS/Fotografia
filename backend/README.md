@@ -39,11 +39,17 @@ Proyecto_2_1_Fotografia/
 
 ## Ejecución de la Demostración y Pruebas del Proyecto 3
 
-Con **Docker Desktop** abierto, abrir una terminal PowerShell dentro de `backend/`:
+### Requisitos en una computadora nueva (solo la primera vez)
+1. Instalar y abrir **Docker Desktop** (https://www.docker.com/products/docker-desktop/). No es necesario instalar PostgreSQL aparte.
+2. En una terminal dentro de `backend/`, crear el entorno virtual e instalar dependencias:
+   ```powershell
+   cd backend
+   python -m venv .venv
+   .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+   ```
+   *(Al correr por primera vez `verificar_paso3.py`, el script crea automáticamente `pruebas_p3/.env`, inicia el contenedor de PostgreSQL 17 en Docker y carga las 23 tablas del esquema).*
 
-```powershell
-cd backend
-```
+---
 
 ### Parte 1 — Verificar contenedor PostgreSQL local y sembrar datos de prueba
 Verifica que el contenedor `fotografia-pruebas-p3-postgres-1` esté activo en `127.0.0.1:55432`, siembra las cuentas de prueba (Administrador, Clientes y Paquetes) y comprueba `/health` y login JWT en el puerto `8010`:

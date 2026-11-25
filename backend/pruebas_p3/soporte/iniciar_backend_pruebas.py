@@ -9,26 +9,20 @@ import socket
 import sys
 from pathlib import Path
 
-CARPETA = Path(__file__).resolve().parent.parent
+CARPETA_SOPORTE = Path(__file__).resolve().parent
+CARPETA = CARPETA_SOPORTE.parent
 BACKEND_DIR = CARPETA.parent
+if str(CARPETA_SOPORTE) not in sys.path:
+    sys.path.insert(0, str(CARPETA_SOPORTE))
 PUERTO_PRUEBAS = 8010
 
 
-def leer_password_local() -> str:
-    """Lee únicamente P3_PASSWORD desde pruebas_p3/.env."""
-    ruta_env = CARPETA / ".env"
-    if not ruta_env.exists():
-        raise RuntimeError("No existe pruebas_p3/.env. Ejecuta primero el paso 1.")
+from conexion_local import _asegurar_env_local
 
-    texto = ruta_env.read_text(encoding="utf-8-sig")
-    claves = [
-        linea.partition("=")[2].strip()
-        for linea in texto.splitlines()
-        if linea.startswith("P3_PASSWORD=")
-    ]
-    if len(claves) != 1 or not claves[0]:
-        raise RuntimeError("Falta P3_PASSWORD en pruebas_p3/.env.")
-    return claves[0]
+
+def leer_password_local() -> str:
+    """Lee o inicializa P3_PASSWORD desde pruebas_p3/.env."""
+    return _asegurar_env_local()
 
 
 def construir_entorno_pruebas() -> dict[str, str]:
