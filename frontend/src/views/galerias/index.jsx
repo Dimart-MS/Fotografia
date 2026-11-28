@@ -11,6 +11,7 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
+  MenuItem,
   Stack,
   TextField,
   Typography
@@ -35,6 +36,7 @@ import {
   eliminarVideo
 } from '../../api/galeriasService';
 
+import { fetchReservas } from '../../api/reservasService';
 const FORMULARIO_VACIO = {
   id_reservacion: '',
   titulo: '',
@@ -64,6 +66,14 @@ function obtenerLista(respuesta) {
   return [];
 }
 
+function obtenerListaReservas(respuesta) {
+  if (Array.isArray(respuesta)) return respuesta;
+  if (Array.isArray(respuesta?.reservas)) return respuesta.reservas;
+  if (Array.isArray(respuesta?.reservaciones)) return respuesta.reservaciones;
+  if (Array.isArray(respuesta?.items)) return respuesta.items;
+  return [];
+}
+
 function obtenerYoutubeEmbed(url) {
   try {
     const direccion = new URL(url);
@@ -89,6 +99,8 @@ export default function GaleriasView() {
   const { accessKey, setToast } = useStudio();
 
   const [galerias, setGalerias] = useState([]);
+  const [reservacionesDisponibles, setReservacionesDisponibles] = useState([]);
+  const [cargandoReservaciones, setCargandoReservaciones] = useState(false);
   const [galeriaSeleccionada, setGaleriaSeleccionada] = useState(null);
 
   const [busqueda, setBusqueda] = useState('');
@@ -136,10 +148,47 @@ export default function GaleriasView() {
   const publicadas = galerias.filter((g) => g.publicada).length;
 
   // Crear galería
-  const abrirNueva = () => {
+  const abrirNueva = async () => {
     setFormulario(FORMULARIO_VACIO);
     setError('');
+    setCargandoReservaciones(true);
     setDialogoAbierto(true);
+
+    try {
+      const respuesta = await fetchReservas(accessKey);
+      const reservas = obtenerListaReservas(respuesta);
+
+      // Reservaciones que ya tienen una galería registrada.
+      const idsConGaleria = galerias.map(
+        (galeria) => Number(galeria.reservacion)
+      );
+
+      // Mostrar únicamente reservaciones confirmadas o finalizadas
+      // que todavía no tengan una galería.
+      const disponibles = reservas.filter((reserva) => {
+        const id = Number(reserva.id ?? reserva.id_reservacion);
+        const estado = String(reserva.status ?? '').trim().toLowerCase();
+
+        const estadoValido = [
+          'confirmada',
+          'realizada',
+          'entregada'
+        ].includes(estado);
+
+        return (
+          Number.isInteger(id) &&
+          id > 0 &&
+          estadoValido &&
+          !idsConGaleria.includes(id)
+        );
+      });
+
+      setReservacionesDisponibles(disponibles);
+    } catch (err) {
+      setError(err.message || 'No se pudieron cargar las reservaciones.');
+    } finally {
+      setCargandoReservaciones(false);
+    }
   };
 
   const cerrarDialogo = () => {
@@ -785,14 +834,35 @@ export default function GaleriasView() {
               {error && <Alert severity="error">{error}</Alert>}
 
               <TextField
-                label="ID de reservación"
-                type="number"
+                select
+                fullWidth
+                label="Seleccionar reservación"
                 value={formulario.id_reservacion}
-                onChange={(e) => cambiarCampo('id_reservacion', e.target.value)}
+                onChange={(e) =>
+                  cambiarCampo('id_reservacion', e.target.value)
+                }
                 required
-                inputProps={{ min: 1 }}
-                helperText="Ingresa el número de la reservación relacionada con el evento."
-              />
+                disabled={
+                  cargandoReservaciones ||
+                  reservacionesDisponibles.length === 0
+                }
+                helperText={
+                  cargandoReservaciones
+                    ? 'Cargando reservaciones...'
+                    : reservacionesDisponibles.length === 0
+                      ? 'No hay reservaciones disponibles para crear una galería.'
+                      : 'Selecciona el evento al que pertenecerá esta galería.'
+                }
+              >
+                {reservacionesDisponibles.map((reserva) => (
+                  <MenuItem
+                    key={reserva.id ?? reserva.id_reservacion}
+                    value={String(reserva.id ?? reserva.id_reservacion)}
+                  >
+                    {`#${reserva.id ?? reserva.id_reservacion} - ${reserva.client_name} - ${reserva.event_type} - ${reserva.event_date?.slice(0, 10)}`}
+                  </MenuItem>
+                ))}
+              </TextField>
 
               <TextField
                 label="Título de la galería"
@@ -821,7 +891,11 @@ export default function GaleriasView() {
             <Button
               type="submit"
               variant="contained"
-              disabled={guardando}
+              disabled={
+                guardando ||
+                cargandoReservaciones ||
+                reservacionesDisponibles.length === 0
+              }
               sx={{
                 borderRadius: '12px',
                 textTransform: 'none',

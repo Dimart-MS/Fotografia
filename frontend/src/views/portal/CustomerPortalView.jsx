@@ -126,8 +126,13 @@ export default function CustomerPortalView({
   onLogout,
   onNewReservation
 }) {
-  const [activeSection, setActiveSection] = useState('reservas');
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState(() => {
+    const savedSection = sessionStorage.getItem('customer_active_section');
+
+    return SECTIONS.some((section) => section.id === savedSection)
+      ? savedSection
+      : 'reservas';
+  }); const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const desktop = useMediaQuery('(min-width:900px)');
   const [selectedReservation, setSelectedReservation] = useState(null);
@@ -162,7 +167,7 @@ export default function CustomerPortalView({
     };
   }, [proofFile]);
 
-    // Estados de galerías
+  // Estados de galerías
   const [galleries, setGalleries] = useState([]);
   const [galleryLoading, setGalleryLoading] = useState(false);
   const [galleryError, setGalleryError] = useState('');
@@ -248,8 +253,11 @@ export default function CustomerPortalView({
   const customerName = customer?.name || session?.user?.name || 'Cliente';
   const firstName = customerName.trim().split(/\s+/)[0];
   const sidebarWidth = 260;
-  const selectSection = (id) => { setActiveSection(id); setMobileNavOpen(false); };
-  const sidebar = (
+  const selectSection = (id) => {
+    setActiveSection(id);
+    sessionStorage.setItem('customer_active_section', id);
+    setMobileNavOpen(false);
+  }; const sidebar = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#FFFFFF' }}>
       <Box sx={{ px: 3, pt: 4, pb: 3, borderBottom: '1px solid #E2E5DD' }}>
         <Typography sx={{ fontFamily: 'Georgia, serif', fontSize: 24, color: '#343B32' }}>Luz &amp; Memoria</Typography>

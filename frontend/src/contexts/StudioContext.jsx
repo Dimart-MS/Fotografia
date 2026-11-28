@@ -1,4 +1,4 @@
-import { createContext, useCallback, useState } from 'react';
+import { createContext, useState, useEffect, useCallback } from 'react';
 import { EMPTY_CLIENT_FORM } from '../config';
 import { getLocalToday } from '../utils/formatters';
 import { dispatch, useSelector } from '../store';
@@ -24,6 +24,7 @@ import { concederProrrogaReserva } from '../api/reservasService';
 export const StudioContext = createContext(null);
 
 export function StudioProvider({ children }) {
+  const [accessKey, setAccessKey] = useState('');
   const { clients, loading: clientsLoading } = useSelector((state) => state.client);
   const {
     bookings,
@@ -34,9 +35,8 @@ export function StudioProvider({ children }) {
   const { open: snackbarOpen, message: toastMessage } = useSelector(
     (state) => state.snackbar
   );
-
-  const [accessKey, setAccessKey] = useState('');
   const [temporaryPassword, setTemporaryPassword] = useState('');
+  const [authReady, setAuthReady] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
@@ -60,6 +60,78 @@ export function StudioProvider({ children }) {
   );
 
   const loading = authLoading || clientsLoading || bookingsLoading;
+
+  // Recuperar y validar la sesión administrativa al cargar la aplicación.
+useEffect(() => {
+  let cancelled = false;
+
+  const restoreSession = async () => {
+    const savedToken = sessionStorage.getItem('studio_access_token');
+
+    if (!savedToken) {
+      setAuthReady(true);
+      return;
+    }
+
+    try {
+      // Comprobar que el token todavía sea válido.
+      const user = await getCurrentUser(savedToken);
+
+      if (user.role !== 'Administrador') {
+        throw new Error('La cuenta no tiene permisos administrativos.');
+      }
+
+      // Recuperar los datos del estudio.
+      const success = await refreshStudioData(savedToken);
+
+      if (!success) {
+        throw new Error('No se pudieron recuperar los datos del estudio.');
+      }
+
+      if (cancelled) return;
+
+      // Recuperar el último módulo visitado.
+      const savedPage = sessionStorage.getItem('studio_current_page');
+
+      const allowedPages = [
+        'inicio',
+        'clientes',
+        'reservas',
+        'paquetes',
+        'galerias',
+        'entregas',
+        'ventas',
+        'pagos'
+      ];
+
+      setPage(
+        allowedPages.includes(savedPage) ? savedPage : 'inicio'
+      );
+
+      setAccessKey(savedToken);
+    } catch (err) {
+      sessionStorage.removeItem('studio_access_token');
+      sessionStorage.removeItem('studio_current_page');
+
+      dispatch(clearClientsState());
+      dispatch(clearBookingsState());
+
+      if (!cancelled) {
+        setAccessKey('');
+      }
+    } finally {
+      if (!cancelled) {
+        setAuthReady(true);
+      }
+    }
+  };
+
+  restoreSession();
+
+  return () => {
+    cancelled = true;
+  };
+}, []);
 
   const setToast = useCallback((msg) => {
     if (msg) {
@@ -111,9 +183,12 @@ export function StudioProvider({ children }) {
         return;
       }
 
-      setAccessKey(token);
-      setLoginPassword('');
-      setPage('inicio');
+      sessionStorage.setItem('studio_access_token', token);
+sessionStorage.setItem('studio_current_page', 'inicio');
+
+setAccessKey(token);
+setLoginPassword('');
+setPage('inicio');
     } catch (err) {
       setError(err.message || 'No se pudo iniciar sesión.');
     } finally {
@@ -123,41 +198,63 @@ export function StudioProvider({ children }) {
 
   // Activar una sesión administrativa ya autenticada
   const activateAdminSession = async (token) => {
-    setError('');
-    setAuthLoading(true);
-    try {
-      // Cargar clientes y reservaciones
-      const success = await refreshStudioData(token);
-      if (!success) {
-        throw new Error(
-          'No se pudieron cargar los datos administrativos.'
-        );
-      }
-      // Guardar el token en el contexto
-      setAccessKey(token);
-      // Abrir el dashboard principal
-      setPage('inicio');
-    } finally {
-      setAuthLoading(false);
+  setError('');
+  setAuthLoading(true);
+
+  try {
+    const user = await getCurrentUser(token);
+
+    if (user.role !== 'Administrador') {
+      throw new Error('Esta cuenta no tiene permisos de administrador.');
     }
-  };
+
+    const success = await refreshStudioData(token);
+
+    if (!success) {
+      throw new Error('No se pudieron cargar los datos administrativos.');
+    }
+
+    sessionStorage.setItem('studio_access_token', token);
+    sessionStorage.setItem('studio_current_page', 'inicio');
+
+    setAccessKey(token);
+    setPage('inicio');
+  } catch (err) {
+    sessionStorage.removeItem('studio_access_token');
+    sessionStorage.removeItem('studio_current_page');
+    setAccessKey('');
+    throw err;
+  } finally {
+    setAuthLoading(false);
+  }
+};
 
   const handleLogout = () => {
-    setAccessKey('');
-    setLoginEmail('');
-    setLoginPassword('');
-    dispatch(clearClientsState());
-    dispatch(clearBookingsState());
-    dispatch(closeSnackbar());
-    setModal(null);
-    setError('');
-  };
+  sessionStorage.removeItem('studio_access_token');
+  sessionStorage.removeItem('studio_current_page');
+
+  setAccessKey('');
+  setLoginEmail('');
+  setLoginPassword('');
+
+  dispatch(clearClientsState());
+  dispatch(clearBookingsState());
+  dispatch(closeSnackbar());
+
+  setModal(null);
+  setError('');
+};
 
   const navigateToPage = (targetPage) => {
-    setPage(targetPage);
-    setSearch('');
-    setError('');
-  };
+  setPage(targetPage);
+
+  if (accessKey) {
+    sessionStorage.setItem('studio_current_page', targetPage);
+  }
+
+  setSearch('');
+  setError('');
+};
 
   const openClientModal = () => {
     setTemporaryPassword('');
@@ -409,6 +506,7 @@ export function StudioProvider({ children }) {
   const value = {
     accessKey,
     loginEmail,
+    authReady,
     setLoginEmail,
     loginPassword,
     setLoginPassword,

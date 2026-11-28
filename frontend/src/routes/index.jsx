@@ -1,4 +1,5 @@
-﻿import { useState } from 'react';
+﻿
+import { useState, useEffect } from 'react';
 
 import MainLayout from '../layout/MainLayout';
 import LoginView from '../views/auth/LoginView';
@@ -22,11 +23,13 @@ import PagosView from '../views/pagos';
 
 import StudioDialogManager from '../views/modals/StudioDialogManager';
 import useStudio from '../hooks/useStudio';
+import { getCurrentUser } from '../api/authService';
 
 export default function AppRoutes() {
     const {
         accessKey,
         page,
+        authReady,
         activateAdminSession
     } = useStudio();
 
@@ -35,6 +38,101 @@ export default function AppRoutes() {
     const [bookingDate, setBookingDate] = useState('');
     const [loginReturnView, setLoginReturnView] = useState('home');
     const [registerReturnView, setRegisterReturnView] = useState('home');
+    const [customerAuthReady, setCustomerAuthReady] = useState(false);
+
+    // Recuperar y validar la sesión del cliente al actualizar la página.
+
+    useEffect(() => {
+        if (!authReady) return;
+
+        // Si ya existe una sesión administrativa, no buscar sesión de cliente.
+        if (accessKey) {
+            setCustomerAuthReady(true);
+            return;
+        }
+
+        let cancelled = false;
+
+        const restoreCustomerSession = async () => {
+            const savedToken = sessionStorage.getItem('customer_access_token');
+
+            if (!savedToken) {
+                setCustomerAuthReady(true);
+                return;
+            }
+
+            try {
+                const user = await getCurrentUser(savedToken);
+
+                if (user.role !== 'Cliente') {
+                    throw new Error('La cuenta no corresponde a un cliente.');
+                }
+
+                if (cancelled) return;
+
+                setCustomerSession({
+                    token: savedToken,
+                    user
+                });
+
+                const savedView = sessionStorage.getItem('customer_current_view');
+
+                if (user.must_change_password) {
+                    setPublicView('change-password');
+                } else if (
+                    ['customer-portal', 'booking-request'].includes(savedView)
+                ) {
+                    setPublicView(savedView);
+                } else {
+                    setPublicView('customer-portal');
+                }
+            } catch (error) {
+                if (!cancelled) {
+                    sessionStorage.removeItem('customer_access_token');
+                    sessionStorage.removeItem('customer_current_view');
+                    sessionStorage.removeItem('customer_active_section');
+
+                    setCustomerSession(null);
+                    setPublicView('home');
+                }
+            } finally {
+                if (!cancelled) {
+                    setCustomerAuthReady(true);
+                }
+            }
+        };
+
+        restoreCustomerSession();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [authReady, accessKey]);
+
+
+    // Guardar la pantalla actual mientras exista una sesión de cliente.
+    useEffect(() => {
+        if (
+            customerSession &&
+            ['customer-portal', 'booking-request', 'change-password'].includes(publicView)
+        ) {
+            sessionStorage.setItem('customer_current_view', publicView);
+        }
+    }, [customerSession, publicView]);
+
+    const clearCustomerSession = () => {
+    sessionStorage.removeItem('customer_access_token');
+    sessionStorage.removeItem('customer_current_view');
+    sessionStorage.removeItem('customer_active_section');
+
+    setCustomerSession(null);
+    setPublicView('home');
+};
+
+    // Esperar a que se compruebe la sesión administrativa.
+    if (!authReady || !customerAuthReady) {
+        return <div>Verificando sesión...</div>;
+    }
 
     const abrirNuevaReservacion = () => {
         setBookingDate('');
@@ -50,15 +148,21 @@ export default function AppRoutes() {
         const role = session.user.role;
 
         if (role === 'Administrador') {
-            await activateAdminSession(session.token);
+            sessionStorage.removeItem('customer_access_token');
+            sessionStorage.removeItem('customer_current_view');
+            sessionStorage.removeItem('customer_active_section');
+
             setCustomerSession(null);
+
+            await activateAdminSession(session.token);
             return;
         }
 
         if (role === 'Cliente') {
+            sessionStorage.setItem('customer_access_token', session.token);
+
             setCustomerSession(session);
 
-            // Primer inicio de sesiÃ³n con contraseÃ±a temporal.
             if (session.user.must_change_password) {
                 setPublicView('change-password');
                 return;
@@ -76,6 +180,7 @@ export default function AppRoutes() {
         throw new Error('El rol no tiene un panel disponible.');
     };
 
+    // Panel administrativo.
     if (accessKey) {
         return (
             <>
@@ -95,6 +200,7 @@ export default function AppRoutes() {
         );
     }
 
+    // Cambio obligatorio de contraseña del cliente.
     if (
         customerSession?.user?.role === 'Cliente' &&
         customerSession.user.must_change_password
@@ -114,14 +220,12 @@ export default function AppRoutes() {
                         setPublicView('customer-portal');
                     }
                 }}
-                onLogout={() => {
-                    setCustomerSession(null);
-                    setPublicView('home');
-                }}
+                onLogout={clearCustomerSession}
             />
         );
     }
 
+    // Portal del cliente.
     if (
         publicView === 'customer-portal' &&
         customerSession?.user?.role === 'Cliente'
@@ -130,14 +234,12 @@ export default function AppRoutes() {
             <CustomerPortalView
                 session={customerSession}
                 onNewReservation={abrirNuevaReservacion}
-                onLogout={() => {
-                    setCustomerSession(null);
-                    setPublicView('home');
-                }}
+                onLogout={clearCustomerSession}
             />
         );
     }
 
+    // Inicio de sesión.
     if (publicView === 'login') {
         return (
             <LoginView
@@ -151,6 +253,7 @@ export default function AppRoutes() {
         );
     }
 
+    // Registro de clientes.
     if (publicView === 'register') {
         return (
             <RegisterView
@@ -160,6 +263,7 @@ export default function AppRoutes() {
         );
     }
 
+    // Solicitud de reservación.
     if (publicView === 'booking-request') {
         return (
             <BookingRequestView
@@ -174,6 +278,7 @@ export default function AppRoutes() {
         );
     }
 
+    // Calendario público.
     if (publicView === 'availability') {
         return (
             <AvailabilityView
@@ -192,6 +297,7 @@ export default function AppRoutes() {
         );
     }
 
+    // Página principal pública.
     return (
         <HomeView
             onLogin={() => openLogin('home')}
